@@ -247,6 +247,26 @@ async function getMatchesForDate(date) {
     }
 }
 
+// Helper function to get matches for a specific date
+async function getMatchesForDate(date) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date = ?
+            ORDER BY Time
+        `;
+        
+        console.log(`📅 Querying matches for date: ${date}...`);
+        const [rows] = await pool.execute(query, [date]);
+        console.log(`✅ Found ${rows.length} matches for ${date}`);
+        
+        return rows;
+    } catch (error) {
+        console.error(`❌ Error querying matches for ${date}:`, error);
+        return [];
+    }
+}
+
 // Helper function to parse query and determine what the user wants
 function parseUserQuery(query) {
     const lowerQuery = query.toLowerCase();
@@ -397,6 +417,11 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
             // User asking about a specific date
             relevantMatches = await getMatchesForDate(queryInfo.specificDate);
             contextDescription = `Matches on ${queryInfo.specificDate}`;
+        } else if (queryInfo.queryType === 'accumulator') {
+            console.log(`🎯 Processing accumulator request - getting upcoming matches...`);
+            // User wants to create an accumulator - get upcoming matches
+            relevantMatches = await getUpcomingMatches(7);
+            contextDescription = "Upcoming matches for accumulator (next 7 days)";
         } else {
             console.log(`🎯 Processing general upcoming matches query...`);
             // General query - get upcoming matches
@@ -454,6 +479,9 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
                 break;
             case 'matches':
                 specificInstructions = 'List and summarize the relevant matches with key details.';
+                break;
+            case 'accumulator':
+                specificInstructions = 'Create a betting accumulator with 2-4 carefully selected matches. Focus on value, odds analysis, and risk assessment for the combined bet.';
                 break;
             default:
                 specificInstructions = 'Provide comprehensive betting analysis and recommendations.';
