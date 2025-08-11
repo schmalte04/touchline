@@ -123,6 +123,108 @@ async function searchMatchesByTeam(teamName) {
     }
 }
 
+// Helper function to search matches by team and specific date
+async function searchMatchesByTeamAndDate(teamName, date) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE (Home LIKE ? OR Away LIKE ?) AND Date = ?
+            ORDER BY Time
+        `;
+        
+        const searchTerm = `%${teamName}%`;
+        console.log(`🔍 Searching matches for team: ${teamName} on date: ${date}`);
+        const [rows] = await pool.execute(query, [searchTerm, searchTerm, date]);
+        console.log(`✅ Found ${rows.length} matches for team "${teamName}" on ${date}`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error searching matches by team and date:', error);
+        return [];
+    }
+}
+
+// Helper function to get matches for today
+async function getTodaysMatches() {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date = CURDATE()
+            ORDER BY Time
+        `;
+        
+        console.log(`📅 Querying matches for today...`);
+        const [rows] = await pool.execute(query);
+        console.log(`✅ Found ${rows.length} matches for today`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error querying today\'s matches:', error);
+        return [];
+    }
+}
+
+// Helper function to get matches for tomorrow
+async function getTomorrowsMatches() {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+            ORDER BY Time
+        `;
+        
+        console.log(`📅 Querying matches for tomorrow...`);
+        const [rows] = await pool.execute(query);
+        console.log(`✅ Found ${rows.length} matches for tomorrow`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error querying tomorrow\'s matches:', error);
+        return [];
+    }
+}
+
+// Helper function to parse query and determine what the user wants
+function parseUserQuery(query) {
+    const lowerQuery = query.toLowerCase();
+    
+    // Extract team names (look for capitalized words that could be team names)
+    const teamMatches = query.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
+    const potentialTeams = teamMatches.filter(match => 
+        match.length > 2 && 
+        !['Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The'].includes(match)
+    );
+    
+    // Determine date context
+    let dateContext = 'upcoming';
+    if (lowerQuery.includes('today')) {
+        dateContext = 'today';
+    } else if (lowerQuery.includes('tomorrow')) {
+        dateContext = 'tomorrow';
+    } else if (lowerQuery.includes('yesterday')) {
+        dateContext = 'yesterday';
+    }
+    
+    // Determine query type
+    let queryType = 'general';
+    if (lowerQuery.includes('score') || lowerQuery.includes('result')) {
+        queryType = 'score';
+    } else if (lowerQuery.includes('odds') || lowerQuery.includes('betting')) {
+        queryType = 'odds';
+    } else if (lowerQuery.includes('prediction') || lowerQuery.includes('analysis')) {
+        queryType = 'analysis';
+    } else if (lowerQuery.includes('matches') || lowerQuery.includes('games') || lowerQuery.includes('fixtures')) {
+        queryType = 'matches';
+    }
+    
+    return {
+        teams: potentialTeams,
+        dateContext,
+        queryType,
+        originalQuery: query
+    };
+}
+
 // Fallback mock data if MySQL fails
 function getMockMatchData() {
     return [
@@ -159,52 +261,113 @@ app.post('/api/chat', async (req, res) => {
         const { message: userQuery } = req.body;
         console.log(`💬 User query: ${userQuery}`);
 
-        // Get data from MySQL
-        const allMatches = await getUpcomingMatches(7);
-        
-        // Check for specific team searches
-        let specificMatches = [];
-        const teamKeywords = userQuery.toLowerCase().match(/\b([a-z\s]{3,20})\b/g) || [];
-        
-        for (const keyword of teamKeywords) {
-            if (keyword.length > 3) {
-                const teamMatches = await searchMatchesByTeam(keyword);
-                if (teamMatches.length > 0) {
-                    specificMatches = [...specificMatches, ...teamMatches];
+        // Parse the user query to understand what they want
+        const queryInfo = parseUserQuery(userQuery);
+        console.log(`🔍 Parsed query:`, queryInfo);
+
+        let relevantMatches = [];
+        let contextDescription = '';
+
+        // Get matches based on the parsed query
+        if (queryInfo.teams.length > 0) {
+            // User mentioned specific teams
+            for (const team of queryInfo.teams) {
+                let teamMatches = [];
+                
+                if (queryInfo.dateContext === 'today') {
+                    teamMatches = await searchMatchesByTeamAndDate(team, new Date().toISOString().split('T')[0]);
+                    contextDescription = `Today's matches for ${team}`;
+                } else if (queryInfo.dateContext === 'tomorrow') {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    teamMatches = await searchMatchesByTeamAndDate(team, tomorrow.toISOString().split('T')[0]);
+                    contextDescription = `Tomorrow's matches for ${team}`;
+                } else {
+                    teamMatches = await searchMatchesByTeam(team);
+                    contextDescription = `Upcoming matches for ${team}`;
                 }
+                
+                relevantMatches = [...relevantMatches, ...teamMatches];
             }
-        }
-
-        // Use specific matches if found, otherwise use all upcoming matches
-        const relevantMatches = specificMatches.length > 0 ? specificMatches : allMatches;
-        
-        // Format match data for Claude
-        let contextData = '';
-        if (relevantMatches.length > 0) {
-            contextData = relevantMatches.slice(0, 10).map(match => 
-                `Match ${match.MATCH_ID}: ${match.Home} vs ${match.Away} | ${match.Date} ${match.Time} | ${match.League} | ELO: ${match.ELO_Home || 'N/A'} vs ${match.ELO_Away || 'N/A'} | xG: ${match.xG_Home || 'N/A'} vs ${match.xG_Away || 'N/A'}`
-            ).join('\n');
+        } else if (queryInfo.dateContext === 'today') {
+            // User asking about today's matches in general
+            relevantMatches = await getTodaysMatches();
+            contextDescription = "Today's matches";
+        } else if (queryInfo.dateContext === 'tomorrow') {
+            // User asking about tomorrow's matches in general
+            relevantMatches = await getTomorrowsMatches();
+            contextDescription = "Tomorrow's matches";
         } else {
-            contextData = 'No matches found in the database.';
+            // General query - get upcoming matches
+            relevantMatches = await getUpcomingMatches(7);
+            contextDescription = "Upcoming matches (next 7 days)";
         }
 
-        // Create prompt for Claude
-        const prompt = `You are an expert football betting analyst with access to live MySQL database data. 
+        // Remove duplicates
+        const uniqueMatches = relevantMatches.filter((match, index, arr) => 
+            arr.findIndex(m => m.MATCH_ID === match.MATCH_ID) === index
+        );
+
+        console.log(`📊 Found ${uniqueMatches.length} relevant matches for query`);
+
+        // Format match data for Claude with more detail
+        let contextData = '';
+        if (uniqueMatches.length > 0) {
+            contextData = `${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
+            contextData += uniqueMatches.slice(0, 15).map(match => {
+                const homeElo = match.ELO_Home || 'N/A';
+                const awayElo = match.ELO_Away || 'N/A';
+                const homeXg = match.xG_Home || 'N/A';
+                const awayXg = match.xG_Away || 'N/A';
+                const homeScore = match.Score_Home !== undefined ? match.Score_Home : 'TBD';
+                const awayScore = match.Score_Away !== undefined ? match.Score_Away : 'TBD';
+                
+                return `🏆 Match ${match.MATCH_ID}: ${match.Home} vs ${match.Away}
+📅 Date: ${match.Date} ${match.Time || ''}
+🏟️ League: ${match.League || 'Unknown'}
+⚽ Score: ${homeScore} - ${awayScore}
+📊 ELO Ratings: ${homeElo} vs ${awayElo}
+🎯 Expected Goals: ${homeXg} vs ${awayXg}
+💰 Odds: ${match.Odds_Home || 'N/A'} / ${match.Odds_Draw || 'N/A'} / ${match.Odds_Away || 'N/A'}`;
+            }).join('\n\n');
+        } else {
+            contextData = `No matches found for your query: "${userQuery}"`;
+        }
+
+        // Create a more specific prompt based on query type
+        let specificInstructions = '';
+        switch (queryInfo.queryType) {
+            case 'score':
+                specificInstructions = 'Focus on match results, current scores, and post-match analysis.';
+                break;
+            case 'odds':
+                specificInstructions = 'Focus on betting odds, value bets, and market analysis.';
+                break;
+            case 'analysis':
+                specificInstructions = 'Provide in-depth statistical analysis and predictions.';
+                break;
+            case 'matches':
+                specificInstructions = 'List and summarize the relevant matches with key details.';
+                break;
+            default:
+                specificInstructions = 'Provide comprehensive betting analysis and recommendations.';
+        }
+
+        const prompt = `You are an expert football betting analyst with access to live MySQL database data.
 
 ${contextData}
 
 User Query: "${userQuery}"
+Query Type: ${queryInfo.queryType}
+Special Instructions: ${specificInstructions}
 
-Please provide:
-1. Statistical analysis using the ELO ratings, xG data, and odds
-2. Value betting opportunities based on data discrepancies  
-3. Risk assessment and confidence levels
-4. Specific recommendations with reasoning
-5. Market value identification
+Based on the specific data above, please provide:
+1. Direct answer to the user's question
+2. Relevant statistical insights from the ELO ratings and xG data
+3. Betting recommendations if applicable
+4. Risk assessment for any suggested bets
 
-Current database contains ${allMatches.length} matches. Answer the user's query with detailed analysis.
-
-Be conversational, insightful, and focus on actionable betting advice. Use the real data provided above.`;
+Be conversational and specific to their query. Use the exact match data provided above.`;
 
         // Call Claude API
         console.log('🤖 Calling Claude API...');
@@ -225,7 +388,8 @@ Be conversational, insightful, and focus on actionable betting advice. Use the r
         res.json({
             success: true,
             response: claudeResponse,
-            matchCount: relevantMatches.length
+            matchCount: uniqueMatches.length,
+            queryInfo: queryInfo
         });
 
     } catch (error) {
