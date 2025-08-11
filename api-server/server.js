@@ -19,8 +19,20 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-// Serve static files from website directory
-app.use(express.static(path.join(__dirname, '../website')));
+// Serve static files from website directory with proper MIME types
+app.use(express.static(path.join(__dirname, '../website'), {
+    setHeaders: function (res, path, stat) {
+        if (path.endsWith('.js')) {
+            res.set('Content-Type', 'application/javascript');
+        }
+        if (path.endsWith('.css')) {
+            res.set('Content-Type', 'text/css');
+        }
+        if (path.endsWith('.html')) {
+            res.set('Content-Type', 'text/html');
+        }
+    }
+}));
 
 // Health check for App Platform
 app.get('/health', (req, res) => {
