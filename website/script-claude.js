@@ -377,8 +377,8 @@ class ClaudeBettingBot {
         // Format xG data
         formatted = formatted.replace(/xG[:\s]*([\d.]+)/gi, '<span class="xg-data">xG: $1</span>');
         
-        // Format team matchups
-        formatted = formatted.replace(/([A-Z][a-z\s]+)\s+vs\s+([A-Z][a-z\s]+)/g, '<span class="match-teams">$1 vs $2</span>');
+        // Temporarily disabled team matchup formatting to avoid false matches
+        // formatted = formatted.replace(/\b([A-Z][a-zA-Z\s]{2,15})\s+vs\s+([A-Z][a-zA-Z\s]{2,15})\b/g, '<span class="match-teams">$1 vs $2</span>');
         
         // Format confidence levels
         formatted = formatted.replace(/(High|Medium|Low)\s+(Confidence|Risk)/gi, '<span class="confidence-badge $1">$1 $2</span>');
