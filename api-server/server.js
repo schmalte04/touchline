@@ -399,6 +399,14 @@ How are you doing today? Are you ready to build some winning accumulator bets? ð
 
         const prompt = `You are an expert football betting analyst with access to live MySQL database data.
 
+DATABASE SCHEMA CONTEXT:
+- Rawdata_Total: Main table with match data (MATCH_ID, Home, Away, Date, Time, League, Score_Home, Score_Away, ELO_Home, ELO_Away, xG_Home, xG_Away, Odds_Home, Odds_Draw, Odds_Away)
+- Price_Data: Betting market prices (MATCH_ID, Market_Type, Price) for handicaps and totals
+- HomeMarketContext/AwayMarketContext: Analysis thresholds for betting evaluation
+- Date format: YYYY-MM-DD, Time: HH:MM:SS, ELO range: 1200-2000, xG range: 0.0-5.0
+- NULL scores indicate future matches, odds in decimal format
+
+CURRENT DATA:
 ${contextData}
 
 User Query: "${userQuery}"
