@@ -258,8 +258,24 @@ function getMockMatchData() {
 // Main chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
-        const { message: userQuery } = req.body;
+        const { message: userQuery, context } = req.body;
         console.log(`💬 User query: ${userQuery}`);
+        console.log(`📋 Context: ${context || 'none'}`);
+
+        // Handle initialization/welcome message
+        if (context === 'initialization' || userQuery.toLowerCase().includes('introduce yourself')) {
+            const welcomeMessage = `Hello! 👋 I'm your Smart Betting Assistant powered by Touch Line, Goal Analytics and GainR.
+
+How are you doing today? Are you ready to build some winning accumulator bets? 🚀`;
+            
+            res.json({
+                success: true,
+                response: welcomeMessage,
+                matchCount: 0,
+                queryInfo: { type: 'welcome' }
+            });
+            return;
+        }
 
         // Parse the user query to understand what they want
         const queryInfo = parseUserQuery(userQuery);
