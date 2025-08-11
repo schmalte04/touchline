@@ -1,0 +1,31 @@
+# DigitalOcean App Platform Configuration
+name: claude-betting-assistant
+services:
+- name: api
+  source_dir: /api-server
+  github:
+    repo: schmalte04/touchline
+    branch: main
+  run_command: node server.js
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  routes:
+  - path: /api
+  env:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: CLAUDE_API_KEY
+    value: YOUR_CLAUDE_API_KEY_HERE
+    type: SECRET
+
+static_sites:
+- name: website
+  source_dir: /website
+  github:
+    repo: schmalte04/touchline  
+    branch: main
+  routes:
+  - path: /
