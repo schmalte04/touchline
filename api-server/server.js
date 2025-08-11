@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const mysql = require('mysql2/promise');
 const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
@@ -34,62 +35,194 @@ app.use(express.static(path.join(__dirname, '../website'), {
     }
 }));
 
+// MySQL Database Configuration
+const dbConfig = {
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'football_data',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+};
+
+// Create MySQL connection pool
+const pool = mysql.createPool(dbConfig);
+
+// Test database connection
+async function testDatabaseConnection() {
+    try {
+        const connection = await pool.getConnection();
+        console.log('✅ MySQL database connected successfully');
+        connection.release();
+        return true;
+    } catch (error) {
+        console.error('❌ MySQL connection failed:', error.message);
+        return false;
+    }
+}
+
+// Helper function to get upcoming matches from MySQL
+async function getUpcomingMatches(days = 7) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+            ORDER BY Date, Time
+            LIMIT 100
+        `;
+        
+        console.log(`📅 Querying upcoming matches for next ${days} days...`);
+        const [rows] = await pool.execute(query, [days]);
+        console.log(`✅ Found ${rows.length} upcoming matches`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error querying upcoming matches:', error);
+        return getMockMatchData();
+    }
+}
+
+// Helper function to get matches for a specific date
+async function getMatchesByDate(date) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date = ?
+            ORDER BY Time
+        `;
+        
+        console.log(`📊 Querying matches for date: ${date}`);
+        const [rows] = await pool.execute(query, [date]);
+        console.log(`✅ Found ${rows.length} matches for ${date}`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error querying matches by date:', error);
+        return [];
+    }
+}
+
+// Helper function to get matches for today and tomorrow
+async function getTodayAndTomorrowMatches() {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date IN (CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 DAY))
+            ORDER BY Date, Time
+        `;
+        
+        console.log('📊 Querying today and tomorrow matches...');
+        const [rows] = await pool.execute(query);
+        console.log(`✅ Found ${rows.length} matches for today and tomorrow`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error querying today/tomorrow matches:', error);
+        return getMockMatchData();
+    }
+}
+
+// Helper function to search matches by team name
+async function searchMatchesByTeam(teamName) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE (Home LIKE ? OR Away LIKE ?) 
+            AND Date >= CURDATE()
+            ORDER BY Date, Time
+            LIMIT 50
+        `;
+        
+        const searchTerm = `%${teamName}%`;
+        console.log(`🔍 Searching matches for team: ${teamName}`);
+        const [rows] = await pool.execute(query, [searchTerm, searchTerm]);
+        console.log(`✅ Found ${rows.length} matches for team "${teamName}"`);
+        
+        return rows;
+    } catch (error) {
+        console.error('❌ Error searching matches by team:', error);
+        return [];
+    }
+}
+
+// Fallback mock data if CSV reading fails
+function getMockMatchData() {
+    console.log('🔄 Using fallback mock data');
+    return [
+        {
+            MATCH_ID: "19375216",
+            Home: "Deportes Limache", 
+            Away: "Audax Italiano",
+            Date: "2025-08-11",
+            Time: "01:00",
+            League: "Primera Chile",
+            PH: 2.45, PD: 3.20, PA: 2.80,
+        },
+        {
+            MATCH_ID: "19375217",
+            Home: "Santos",
+            Away: "Palmeiras", 
+            Date: "2025-08-11",
+            Time: "22:00",
+            League: "Brasileirao Serie A",
+            PH: 3.10, PD: 3.40, PA: 2.20,
+        }
+    ];
+}
+
 // Health check for App Platform
-app.get('/health', (req, res) => {
+app.get('/health', async (req, res) => {
+    const dbConnected = await testDatabaseConnection();
     res.json({
         status: 'running',
+        database: dbConnected ? 'connected' : 'disconnected',
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || 'development'
     });
 });
 
-// MCP Client class to handle calls to MCP tools
+// MySQL Database Client class
 class MCPClient {
     constructor() {
         this.isConnected = false;
     }
 
-    // Initialize connection to MCP server
+    // Initialize connection to MySQL database
     async connect() {
         try {
-            console.log('Connecting to MCP CSV server...');
-            // Test if MCP tools are available by checking global functions
-            if (typeof global.mcp_csv_server_read_csv !== 'undefined' || 
-                typeof mcp_csv_server_read_csv !== 'undefined') {
-                this.isConnected = true;
-                console.log('✅ MCP tools detected');
+            console.log('Connecting to MySQL database...');
+            this.isConnected = await testDatabaseConnection();
+            if (this.isConnected) {
+                console.log('✅ MySQL database connection established');
                 return true;
             } else {
-                console.log('⚠️ MCP tools not available in server context');
-                this.isConnected = false;
+                console.log('⚠️ MySQL database not available');
                 return false;
             }
         } catch (error) {
-            console.error('Failed to connect to MCP:', error);
+            console.error('Failed to connect to MySQL:', error);
             return false;
         }
     }
 
-    // Call MCP tool to get recent matches
+    // Call MySQL to get recent matches
     async getRecentMatches(filters = {}) {
         try {
-            // Since we're in a server context, we need to call MCP through a different approach
-            // For now, let's return today's date filtered data and indicate it's from MCP
-            console.log('Fetching recent matches from MCP CSV server...');
+            console.log('Fetching recent matches from MySQL database...');
             
-            // Get today's matches from the CSV data
-            const today = new Date().toISOString().split('T')[0]; // 2025-08-11
-            
-            // Return realistic match data that would come from MCP
-            return this.getRealMatchData(today);
+            // Get upcoming matches from MySQL
+            const upcomingMatches = await getUpcomingMatches(7); // Get next 7 days
+            return upcomingMatches;
             
         } catch (error) {
-            console.error('MCP call failed:', error);
-            throw error;
+            console.error('MySQL query failed:', error);
+            // Fallback to mock data
+            return getMockMatchData();
         }
     }
 
-    // Get match analysis using Claude API with MCP data
+    // Get match analysis using Claude API with MySQL data
     async analyzeMatch(matchId, userQuery) {
         try {
             // Check if user is asking for a match list/table
@@ -100,10 +233,13 @@ class MCPClient {
                  userQuery.toLowerCase().includes('today') ||
                  userQuery.toLowerCase().includes('list'));
 
-            // Get real match data for context
-            const todaysMatches = this.getRealMatchData('2025-08-11');
-            const tomorrowsMatches = this.getRealMatchData('2025-08-12');
-            const allMatches = [...todaysMatches, ...tomorrowsMatches];
+            // Get real match data for context using MySQL
+            const todaysMatches = await getMatchesByDate(new Date().toISOString().split('T')[0]);
+            const tomorrowDate = new Date();
+            tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+            const tomorrowsMatches = await getMatchesByDate(tomorrowDate.toISOString().split('T')[0]);
+            const upcomingMatches = await getUpcomingMatches(7);
+            const allMatches = [...todaysMatches, ...tomorrowsMatches, ...upcomingMatches];
             
             // If user wants a match list, return table format
             if (isRequestingMatchList) {
@@ -112,18 +248,26 @@ class MCPClient {
 
             const specificMatch = matchId ? todaysMatches.find(m => m.MATCH_ID === matchId) : null;
             
-            // Prepare context for Claude
-            let contextData = "Live MCP Football Data for 2025-08-11:\n";
+            // Prepare context for Claude with real MySQL data
+            const today = new Date().toISOString().split('T')[0];
+            let contextData = `Live MySQL Football Data for ${today}:\n`;
             todaysMatches.forEach(match => {
                 contextData += `\nMatch ID ${match.MATCH_ID}: ${match.Home} vs ${match.Away} (${match.League})
-- ELO: ${match.ELO_Home} vs ${match.ELO_Away} (probability: ${(match.ELO_prob * 100).toFixed(0)}%)
+- ELO: ${match.ELO_Home || 'N/A'} vs ${match.ELO_Away || 'N/A'} (probability: ${match.ELO_prob ? (match.ELO_prob * 100).toFixed(0) : 'N/A'}%)
 - xG: ${match.xG || 'N/A'} vs ${match.xG_Away || 'N/A'}
 - Odds: Home ${match.PH || 'N/A'}, Draw ${match.PD || 'N/A'}, Away ${match.PA || 'N/A'}
 - Score predictions: ${match.Score_Home || 'N/A'} vs ${match.Score_Away || 'N/A'}`;
             });
+            
+            if (upcomingMatches.length > 0) {
+                contextData += `\n\nUpcoming Matches (Next 7 Days): ${upcomingMatches.length} matches available`;
+                upcomingMatches.slice(0, 5).forEach(match => {
+                    contextData += `\n${match.Date} - ${match.Home} vs ${match.Away} (${match.League})`;
+                });
+            }
 
             // Create prompt for Claude
-            const prompt = `You are an expert football betting analyst with access to live MCP data. 
+            const prompt = `You are an expert football betting analyst with access to live MySQL database data. 
 
 ${contextData}
 
@@ -132,6 +276,11 @@ ${specificMatch ? `\nFocus on: ${specificMatch.Home} vs ${specificMatch.Away} (M
 
 Please provide:
 1. Statistical analysis using the ELO ratings, xG data, and odds
+2. Risk assessment and confidence levels
+3. Specific betting recommendations with reasoning
+4. Market value identification
+
+Current database contains ${allMatches.length} matches. Answer the user's query with detailed analysis.`;
 2. Value betting opportunities based on data discrepancies  
 3. Risk assessment and confidence levels
 4. Specific recommendations with reasoning
@@ -247,10 +396,33 @@ Be conversational, insightful, and focus on actionable betting advice. Use the r
         return tableHTML;
     }
 
-    // Get real match data from CSV (simulating MCP call structure)
-    getRealMatchData(date) {
-        // This simulates real MCP data but with more realistic match IDs and data
-        // In a real implementation, this would call mcp_csv_server_filter_csv_advanced
+    // Get real match data from CSV
+    async getRealMatchData(date) {
+        try {
+            console.log(`📊 Getting real match data for date: ${date}`);
+            const allMatches = await readCsvFile();
+            
+            // Filter matches for the specific date
+            const dateMatches = allMatches.filter(match => match.Date === date);
+            
+            if (dateMatches.length > 0) {
+                console.log(`✅ Found ${dateMatches.length} matches for ${date}`);
+                return dateMatches.map(match => ({
+                    ...match,
+                    source: "real_csv_data"
+                }));
+            } else {
+                console.log(`⚠️ No matches found for ${date}, returning mock data`);
+                return this.getMockDataForDate(date);
+            }
+        } catch (error) {
+            console.error('❌ Error reading CSV data:', error);
+            return this.getMockDataForDate(date);
+        }
+    }
+
+    // Fallback mock data for specific dates
+    getMockDataForDate(date) {
         
         if (date === '2025-08-11') {
             // Real MCP data for today's matches (2025-08-11)
@@ -585,16 +757,20 @@ app.get('/api/health', (req, res) => {
 
 // Start server
 app.listen(PORT, async () => {
-    console.log(`🚀 MCP Betting API Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🚀 Claude Betting Assistant API server running on port ${PORT}`);
+    console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
     
-    // Connect to MCP
-    const connected = await mcpClient.connect();
-    if (connected) {
-        console.log('✅ MCP connection established');
+    // Test database connection on startup
+    const dbConnected = await testDatabaseConnection();
+    if (dbConnected) {
+        console.log('✅ MySQL database connection verified');
     } else {
-        console.log('⚠️ MCP connection failed - using fallback mode');
+        console.log('⚠️ MySQL database connection failed - will use fallback data');
     }
+    
+    // Initialize MCP client
+    const mcpClient = new MCPClient();
+    await mcpClient.connect();
 });
 
 module.exports = app;
