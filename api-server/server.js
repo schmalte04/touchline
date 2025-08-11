@@ -356,15 +356,6 @@ Be conversational, insightful, and focus on actionable betting advice. Use the r
         return [];
     }
 
-    // Generate fallback Claude response for when API fails
-                ELO_prob: 0.25,
-                xG: 0.85, xG_Away: 1.30,
-                Score_Home: 0.74, Score_Away: 1.33,
-                source: "mcp_csv_server"
-            }
-        ];
-    }
-
     // Generate Claude-like intelligent response using real match data
     generateClaudeResponse(matchId, userQuery) {
         const responses = {
