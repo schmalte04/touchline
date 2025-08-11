@@ -1,5 +1,4 @@
-# DigitalOcean App Platform Configuration
-name: claude-betting-assistant
+name: touchline
 services:
 - name: api
   source_dir: /api-server
@@ -10,8 +9,7 @@ services:
   environment_slug: node-js
   instance_count: 1
   instance_size_slug: basic-xxs
-  routes:
-  - path: /api
+  http_port: 8080
   env:
   - key: NODE_ENV
     value: production
@@ -27,5 +25,4 @@ static_sites:
   github:
     repo: schmalte04/touchline  
     branch: main
-  routes:
-  - path: /
+  index_document: index.html

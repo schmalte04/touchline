@@ -19,8 +19,11 @@ class ClaudeBettingBot {
             // If opened directly via file://, use localhost server
             return 'http://localhost:3001';
         } else if (window.location.hostname.includes('ondigitalocean.app')) {
-            // If on DigitalOcean App Platform, use the API service URL
-            return '/api';
+            // If on DigitalOcean App Platform, construct API URL
+            const hostname = window.location.hostname;
+            // Replace 'website' or main domain with 'api' subdomain
+            const apiHostname = hostname.replace(/^[^.]+/, 'api');
+            return `https://${apiHostname}`;
         } else {
             // If served by our server, use relative URLs
             return '';
