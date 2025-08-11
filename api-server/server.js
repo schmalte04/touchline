@@ -167,6 +167,22 @@ async function getTodaysMatches() {
 // Helper function to get matches for tomorrow
 async function getTomorrowsMatches() {
     try {
+        // First, let's see what the current date is in MySQL and what tomorrow's date should be
+        const dateCheckQuery = `SELECT CURDATE() as today, DATE_ADD(CURDATE(), INTERVAL 1 DAY) as tomorrow`;
+        const [dateRows] = await pool.execute(dateCheckQuery);
+        console.log(`📅 MySQL dates - Today: ${dateRows[0].today}, Tomorrow: ${dateRows[0].tomorrow}`);
+        
+        // Also check what dates we have in the database
+        const availableDatesQuery = `
+            SELECT DISTINCT Date, COUNT(*) as match_count 
+            FROM Rawdata_Total 
+            WHERE Date >= CURDATE() 
+            ORDER BY Date 
+            LIMIT 10
+        `;
+        const [availableRows] = await pool.execute(availableDatesQuery);
+        console.log(`📅 Available dates in database:`, availableRows.map(row => `${row.Date}: ${row.match_count} matches`));
+        
         const query = `
             SELECT * FROM Rawdata_Total 
             WHERE Date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)
@@ -174,8 +190,14 @@ async function getTomorrowsMatches() {
         `;
         
         console.log(`📅 Querying matches for tomorrow...`);
+        console.log(`📅 SQL Query: ${query}`);
         const [rows] = await pool.execute(query);
         console.log(`✅ Found ${rows.length} matches for tomorrow`);
+        
+        // Debug: Log the actual date we're looking for
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        console.log(`📅 Tomorrow's date (JavaScript): ${tomorrow.toISOString().split('T')[0]}`);
         
         return rows;
     } catch (error) {
@@ -280,12 +302,15 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
         // Parse the user query to understand what they want
         const queryInfo = parseUserQuery(userQuery);
         console.log(`🔍 Parsed query:`, queryInfo);
+        console.log(`🔍 Date context detected: ${queryInfo.dateContext}`);
+        console.log(`🔍 Teams detected: ${queryInfo.teams}`);
 
         let relevantMatches = [];
         let contextDescription = '';
 
         // Get matches based on the parsed query
         if (queryInfo.teams.length > 0) {
+            console.log(`🎯 Processing team-specific query...`);
             // User mentioned specific teams
             for (const team of queryInfo.teams) {
                 let teamMatches = [];
@@ -306,14 +331,17 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
                 relevantMatches = [...relevantMatches, ...teamMatches];
             }
         } else if (queryInfo.dateContext === 'today') {
+            console.log(`🎯 Processing today's matches query...`);
             // User asking about today's matches in general
             relevantMatches = await getTodaysMatches();
             contextDescription = "Today's matches";
         } else if (queryInfo.dateContext === 'tomorrow') {
+            console.log(`🎯 Processing tomorrow's matches query...`);
             // User asking about tomorrow's matches in general
             relevantMatches = await getTomorrowsMatches();
             contextDescription = "Tomorrow's matches";
         } else {
+            console.log(`🎯 Processing general upcoming matches query...`);
             // General query - get upcoming matches
             relevantMatches = await getUpcomingMatches(7);
             contextDescription = "Upcoming matches (next 7 days)";
