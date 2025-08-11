@@ -172,16 +172,24 @@ async function getTomorrowsMatches() {
         const [dateRows] = await pool.execute(dateCheckQuery);
         console.log(`📅 MySQL dates - Today: ${dateRows[0].today}, Tomorrow: ${dateRows[0].tomorrow}`);
         
-        // Also check what dates we have in the database
+        // Also check what dates we have in the database around tomorrow
         const availableDatesQuery = `
             SELECT DISTINCT Date, COUNT(*) as match_count 
             FROM Rawdata_Total 
-            WHERE Date >= CURDATE() 
+            WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
             ORDER BY Date 
-            LIMIT 10
         `;
         const [availableRows] = await pool.execute(availableDatesQuery);
-        console.log(`📅 Available dates in database:`, availableRows.map(row => `${row.Date}: ${row.match_count} matches`));
+        console.log(`📅 Available dates in database (next 3 days):`, availableRows.map(row => `${row.Date}: ${row.match_count} matches`));
+        
+        // Check specifically for August 12, 2025
+        const specificDateQuery = `
+            SELECT COUNT(*) as count 
+            FROM Rawdata_Total 
+            WHERE Date = '2025-08-12'
+        `;
+        const [specificRows] = await pool.execute(specificDateQuery);
+        console.log(`📅 Matches on 2025-08-12: ${specificRows[0].count}`);
         
         const query = `
             SELECT * FROM Rawdata_Total 
@@ -198,6 +206,19 @@ async function getTomorrowsMatches() {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         console.log(`📅 Tomorrow's date (JavaScript): ${tomorrow.toISOString().split('T')[0]}`);
+        
+        // If no matches found with MySQL CURDATE(), try with hardcoded date
+        if (rows.length === 0) {
+            console.log(`🔍 No matches found with CURDATE() + 1, trying hardcoded 2025-08-12...`);
+            const hardcodedQuery = `
+                SELECT * FROM Rawdata_Total 
+                WHERE Date = '2025-08-12'
+                ORDER BY Time
+            `;
+            const [hardcodedRows] = await pool.execute(hardcodedQuery);
+            console.log(`✅ Found ${hardcodedRows.length} matches for 2025-08-12 with hardcoded date`);
+            return hardcodedRows;
+        }
         
         return rows;
     } catch (error) {
@@ -366,13 +387,18 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
                 const homeScore = match.Score_Home !== undefined ? match.Score_Home : 'TBD';
                 const awayScore = match.Score_Away !== undefined ? match.Score_Away : 'TBD';
                 
+                // Use correct column names from database schema
+                const homeOdds = match.PH || match.Odds_Home || 'N/A';
+                const drawOdds = match.PD || match.Odds_Draw || 'N/A';
+                const awayOdds = match.PA || match.Odds_Away || 'N/A';
+                
                 return `🏆 Match ${match.MATCH_ID}: ${match.Home} vs ${match.Away}
 📅 Date: ${match.Date} ${match.Time || ''}
 🏟️ League: ${match.League || 'Unknown'}
 ⚽ Score: ${homeScore} - ${awayScore}
 📊 ELO Ratings: ${homeElo} vs ${awayElo}
 🎯 Expected Goals: ${homeXg} vs ${awayXg}
-💰 Odds: ${match.Odds_Home || 'N/A'} / ${match.Odds_Draw || 'N/A'} / ${match.Odds_Away || 'N/A'}`;
+💰 Odds: ${homeOdds} / ${drawOdds} / ${awayOdds}`;
             }).join('\n\n');
         } else {
             contextData = `📋 I'm now looking in Rawdata_Total database table...\n\nNo matches found for your query: "${userQuery}"`;
@@ -400,7 +426,9 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
         const prompt = `You are an expert football betting analyst with access to live MySQL database data.
 
 DATABASE SCHEMA CONTEXT:
-- Rawdata_Total: Main table with match data (MATCH_ID, Home, Away, Date, Time, League, Score_Home, Score_Away, ELO_Home, ELO_Away, xG_Home, xG_Away, Odds_Home, Odds_Draw, Odds_Away)
+- Rawdata_Total: Main table with match data (MATCH_ID, Home, Away, Date, Time, League, Score_Home, Score_Away, ELO_Home, ELO_Away, xG_Home, xG_Away, PH, PD, PA, HS_Target, AS_Target)
+- PH = Home win odds, PD = Draw odds, PA = Away win odds
+- HS_Target = Home shots, AS_Target = Away shots
 - Price_Data: Betting market prices (MATCH_ID, Market_Type, Price) for handicaps and totals
 - HomeMarketContext/AwayMarketContext: Analysis thresholds for betting evaluation
 - Date format: YYYY-MM-DD, Time: HH:MM:SS, ELO range: 1200-2000, xG range: 0.0-5.0
