@@ -28,23 +28,46 @@ class ClaudeBettingBot {
     }
 
     initializeElements() {
+        console.log('🔧 Initializing DOM elements...');
         this.chatMessages = document.getElementById('chatMessages');
         this.chatInput = document.getElementById('chatInput');
         this.sendButton = document.getElementById('sendButton');
         this.typingIndicator = document.getElementById('typingIndicator');
+        
+        console.log('📋 Element check:');
+        console.log('  - chatMessages:', this.chatMessages ? '✅ Found' : '❌ Missing');
+        console.log('  - chatInput:', this.chatInput ? '✅ Found' : '❌ Missing');
+        console.log('  - sendButton:', this.sendButton ? '✅ Found' : '❌ Missing');
+        console.log('  - typingIndicator:', this.typingIndicator ? '✅ Found' : '❌ Missing');
     }
 
     setupEventListeners() {
+        console.log('🎧 Setting up event listeners...');
+        
         if (this.sendButton) {
-            this.sendButton.addEventListener('click', () => this.sendMessage());
+            console.log('✅ Attaching click listener to send button');
+            this.sendButton.addEventListener('click', () => {
+                console.log('🖱️ Send button clicked!');
+                this.sendMessage();
+            });
+        } else {
+            console.error('❌ Send button not found!');
         }
+        
         if (this.chatInput) {
+            console.log('✅ Attaching keypress listener to input');
             this.chatInput.addEventListener('keypress', (e) => {
+                console.log('⌨️ Key pressed:', e.key);
                 if (e.key === 'Enter') {
+                    console.log('🎯 Enter key pressed - sending message');
                     this.sendMessage();
                 }
             });
+        } else {
+            console.error('❌ Chat input not found!');
         }
+        
+        console.log('🎧 Event listeners setup complete');
     }
 
     async startClaude() {
@@ -383,11 +406,27 @@ class ClaudeBettingBot {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         console.log('🎯 DOM READY - STARTING CLAUDE');
-        new ClaudeBettingBot();
+        const bot = new ClaudeBettingBot();
+        // Make bot available globally for debugging
+        window.claudeBot = bot;
     });
 } else {
     console.log('🎯 DOM ALREADY READY - STARTING CLAUDE');
-    new ClaudeBettingBot();
+    const bot = new ClaudeBettingBot();
+    // Make bot available globally for debugging
+    window.claudeBot = bot;
 }
 
+// Add a test function for debugging
+window.testMessage = function(message = "Hello test") {
+    console.log('🧪 Testing message function...');
+    if (window.claudeBot) {
+        window.claudeBot.chatInput.value = message;
+        window.claudeBot.sendMessage();
+    } else {
+        console.error('❌ Claude bot not available');
+    }
+};
+
 console.log('✅ CLAUDE AI SCRIPT LOADED SUCCESSFULLY');
+console.log('💡 You can test messaging by typing: testMessage("your message here") in the console');
