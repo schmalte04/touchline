@@ -1,0 +1,22 @@
+{
+  "name": "touchline-betting-assistant",
+  "version": "1.0.0",
+  "description": "Touchline - AI-Powered Football Betting Assistant with Claude AI integration",
+  "main": "api-server/server.js",
+  "scripts": {
+    "start": "node api-server/server.js",
+    "dev": "nodemon api-server/server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "keywords": ["claude", "betting", "ai", "football", "touchline"],
+  "author": "Touchline Development",
+  "license": "MIT"
+}

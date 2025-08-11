@@ -19,6 +19,9 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// Serve static files from website directory
+app.use(express.static(path.join(__dirname, '../website')));
+
 // Health check for App Platform
 app.get('/health', (req, res) => {
     res.json({
