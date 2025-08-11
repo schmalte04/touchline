@@ -227,6 +227,26 @@ async function getTomorrowsMatches() {
     }
 }
 
+// Helper function to get matches for a specific date
+async function getMatchesForDate(date) {
+    try {
+        const query = `
+            SELECT * FROM Rawdata_Total 
+            WHERE Date = ?
+            ORDER BY Time
+        `;
+        
+        console.log(`📅 Querying matches for date: ${date}...`);
+        const [rows] = await pool.execute(query, [date]);
+        console.log(`✅ Found ${rows.length} matches for ${date}`);
+        
+        return rows;
+    } catch (error) {
+        console.error(`❌ Error querying matches for ${date}:`, error);
+        return [];
+    }
+}
+
 // Helper function to parse query and determine what the user wants
 function parseUserQuery(query) {
     const lowerQuery = query.toLowerCase();
@@ -235,17 +255,22 @@ function parseUserQuery(query) {
     const teamMatches = query.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
     const potentialTeams = teamMatches.filter(match => 
         match.length > 2 && 
-        !['Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The'].includes(match)
+        !['Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The', 'August'].includes(match)
     );
     
-    // Determine date context
+    // Determine date context - enhanced to detect specific dates
     let dateContext = 'upcoming';
+    let specificDate = null;
+    
     if (lowerQuery.includes('today')) {
         dateContext = 'today';
     } else if (lowerQuery.includes('tomorrow')) {
         dateContext = 'tomorrow';
     } else if (lowerQuery.includes('yesterday')) {
         dateContext = 'yesterday';
+    } else if (lowerQuery.includes('august') || lowerQuery.includes('12th') || lowerQuery.includes('2025-08-12')) {
+        dateContext = 'specific';
+        specificDate = '2025-08-12';
     }
     
     // Determine query type
@@ -258,12 +283,15 @@ function parseUserQuery(query) {
         queryType = 'analysis';
     } else if (lowerQuery.includes('matches') || lowerQuery.includes('games') || lowerQuery.includes('fixtures')) {
         queryType = 'matches';
+    } else if (lowerQuery.includes('acca') || lowerQuery.includes('accumulator')) {
+        queryType = 'accumulator';
     }
     
     return {
         teams: potentialTeams,
         dateContext,
         queryType,
+        specificDate,
         originalQuery: query
     };
 }
@@ -344,6 +372,9 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     teamMatches = await searchMatchesByTeamAndDate(team, tomorrow.toISOString().split('T')[0]);
                     contextDescription = `Tomorrow's matches for ${team}`;
+                } else if (queryInfo.dateContext === 'specific' && queryInfo.specificDate) {
+                    teamMatches = await searchMatchesByTeamAndDate(team, queryInfo.specificDate);
+                    contextDescription = `Matches for ${team} on ${queryInfo.specificDate}`;
                 } else {
                     teamMatches = await searchMatchesByTeam(team);
                     contextDescription = `Upcoming matches for ${team}`;
@@ -361,6 +392,11 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
             // User asking about tomorrow's matches in general
             relevantMatches = await getTomorrowsMatches();
             contextDescription = "Tomorrow's matches";
+        } else if (queryInfo.dateContext === 'specific' && queryInfo.specificDate) {
+            console.log(`🎯 Processing specific date query for ${queryInfo.specificDate}...`);
+            // User asking about a specific date
+            relevantMatches = await getMatchesForDate(queryInfo.specificDate);
+            contextDescription = `Matches on ${queryInfo.specificDate}`;
         } else {
             console.log(`🎯 Processing general upcoming matches query...`);
             // General query - get upcoming matches
