@@ -49,9 +49,8 @@ class ClaudeBettingBot {
 
     async startClaude() {
         console.log('🔥 STARTING CLAUDE AI...');
-        await this.addBotMessage("🤖 Initializing Claude AI...");
         
-        // Test API connection first
+        // Just do a silent health check without showing messages
         try {
             const healthUrl = this.baseUrl + '/api/health';
             console.log('🏥 Testing health endpoint:', healthUrl);
@@ -62,51 +61,72 @@ class ClaudeBettingBot {
             if (healthResponse.ok) {
                 const healthData = await healthResponse.json();
                 console.log('🏥 Health data:', healthData);
-                await this.addBotMessage(`✅ Claude AI connected! Status: ${healthData.status}`);
+                console.log('✅ Claude AI is ready!');
             } else {
                 console.error('❌ Health check failed:', healthResponse.status);
-                await this.addBotMessage(`❌ Health check failed: ${healthResponse.status}`);
             }
         } catch (error) {
             console.error('❌ Health check error:', error);
-            await this.addBotMessage(`❌ Cannot reach API: ${error.message}`);
         }
         
-        await this.addBotMessage("💬 I'm your AI betting assistant! Ask me about any football matches or betting strategies.");
-        
-        // Test if we can get matches
+        // Send initial greeting message through API to get the proper welcome
         try {
-            const matchesUrl = this.baseUrl + '/api/matches';
-            console.log('⚽ Testing matches endpoint:', matchesUrl);
-            
-            const matchesResponse = await fetch(matchesUrl);
-            if (matchesResponse.ok) {
-                const matchesData = await matchesResponse.json();
-                console.log('⚽ Matches data:', matchesData);
-                if (matchesData.data && matchesData.data.length > 0) {
-                    await this.addBotMessage(`🎯 Found ${matchesData.data.length} matches for analysis!`);
-                }
-            }
+            await this.sendInitialMessage();
         } catch (error) {
-            console.error('Error fetching matches:', error.message);
-            
-            await this.addBotMessage(`❌ Claude AI connection failed: ${error.message}`);
-            await this.addBotMessage("🔄 Using fallback mode. You can still chat, but responses may be limited.");
+            console.error('❌ Could not send initial message:', error);
+            // Fallback message if API fails
+            await this.addBotMessage("💬 Hello! I'm your AI betting assistant. The connection seems unstable, but you can still try chatting with me!");
+        }
+    }
+
+    async sendInitialMessage() {
+        console.log('📤 Sending initial greeting...');
+        
+        const apiUrl = this.baseUrl + '/api/chat';
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: "Hello! Please introduce yourself and explain how you can help with betting analysis.",
+                context: 'initialization',
+                conversationState: 'new'
+            })
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                await this.addBotMessage(data.response);
+            }
         }
     }
 
     async sendMessage() {
         const message = this.chatInput.value.trim();
-        if (!message) return;
+        console.log('📝 User typed message:', message);
+        
+        if (!message) {
+            console.log('❌ Empty message, not sending');
+            return;
+        }
 
+        console.log('✅ Adding user message to chat');
         this.addUserMessage(message);
         this.chatInput.value = '';
 
         try {
+            console.log('🔄 Showing typing indicator');
             this.showTyping();
             
             const apiUrl = this.baseUrl + '/api/chat';
             console.log('📤 Sending message to:', apiUrl);
+            console.log('📤 Message payload:', {
+                message: message,
+                context: 'chat',
+                conversationState: 'active'
+            });
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -121,9 +141,12 @@ class ClaudeBettingBot {
             });
 
             console.log('📨 Chat response status:', response.status);
+            console.log('📨 Chat response headers:', response.headers);
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                const errorText = await response.text();
+                console.error('❌ Response not OK. Status:', response.status, 'Text:', errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
             }
 
             const data = await response.json();
@@ -132,15 +155,21 @@ class ClaudeBettingBot {
             this.hideTyping();
             
             if (data.success) {
+                console.log('✅ Success! Adding bot response');
                 await this.addBotMessage(data.response);
             } else {
+                console.error('❌ API returned success=false:', data.error);
                 await this.addBotMessage(`Sorry, Claude returned an error: ${data.error || 'Unknown error'}`);
             }
             
         } catch (error) {
-            console.error('❌ Chat error:', error);
+            console.error('❌ Chat error details:', {
+                message: error.message,
+                stack: error.stack,
+                url: this.baseUrl + '/api/chat'
+            });
             this.hideTyping();
-            await this.addBotMessage(`Connection error: ${error.message}. Please try again.`);
+            await this.addBotMessage(`Connection error: ${error.message}. Please check the console for details and try again.`);
         }
     }
 
