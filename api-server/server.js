@@ -276,14 +276,12 @@ ${specificMatch ? `\nFocus on: ${specificMatch.Home} vs ${specificMatch.Away} (M
 
 Please provide:
 1. Statistical analysis using the ELO ratings, xG data, and odds
-2. Risk assessment and confidence levels
-3. Specific betting recommendations with reasoning
-4. Market value identification
-
-Current database contains ${allMatches.length} matches. Answer the user's query with detailed analysis.`;
 2. Value betting opportunities based on data discrepancies  
 3. Risk assessment and confidence levels
 4. Specific recommendations with reasoning
+5. Market value identification
+
+Current database contains ${allMatches.length} matches. Answer the user's query with detailed analysis.
 
 Be conversational, insightful, and focus on actionable betting advice. Use the real data provided above.`;
 
