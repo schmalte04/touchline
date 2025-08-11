@@ -357,7 +357,7 @@ How are you doing today? Are you ready to build some winning accumulator bets? ð
         // Format match data for Claude with more detail
         let contextData = '';
         if (uniqueMatches.length > 0) {
-            contextData = `${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
+            contextData = `ðŸ“‹ I'm now looking in Rawdata_Total database table...\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
             contextData += uniqueMatches.slice(0, 15).map(match => {
                 const homeElo = match.ELO_Home || 'N/A';
                 const awayElo = match.ELO_Away || 'N/A';
@@ -375,7 +375,7 @@ How are you doing today? Are you ready to build some winning accumulator bets? ð
 ðŸ’° Odds: ${match.Odds_Home || 'N/A'} / ${match.Odds_Draw || 'N/A'} / ${match.Odds_Away || 'N/A'}`;
             }).join('\n\n');
         } else {
-            contextData = `No matches found for your query: "${userQuery}"`;
+            contextData = `ðŸ“‹ I'm now looking in Rawdata_Total database table...\n\nNo matches found for your query: "${userQuery}"`;
         }
 
         // Create a more specific prompt based on query type
@@ -413,7 +413,7 @@ User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-Based on the specific data above, please provide:
+IMPORTANT: Start your response by mentioning that you're looking in the Rawdata_Total database table, then provide:
 1. Direct answer to the user's question
 2. Relevant statistical insights from the ELO ratings and xG data
 3. Betting recommendations if applicable
