@@ -468,7 +468,8 @@ function parseUserQueryEnhanced(query) {
         'Today', 'Tomorrow', 'Yesterday', 'Premier', 'League', 'Champions', 'Europa', 'Cup',
         'August', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
         'What', 'When', 'Where', 'Who', 'How', 'Show', 'Find', 'Get', 'Tell', 'Give',
-        'Analysis', 'Odds', 'Betting', 'Match', 'Game', 'Fixture', 'Score', 'Result'
+        'Analysis', 'Odds', 'Betting', 'Match', 'Game', 'Fixture', 'Score', 'Result',
+        'Help', 'Please', 'Can', 'Could', 'Would', 'Should', 'Need', 'Want', 'Create', 'Make', 'Build'
     ];
 
     let allMatches = [];
@@ -477,13 +478,35 @@ function parseUserQueryEnhanced(query) {
         allMatches = [...allMatches, ...matches];
     });
 
-    result.teams = [...new Set(allMatches)]
-        .filter(match => 
-            match.length > 2 && 
-            !EXCLUDED_WORDS.includes(match) &&
-            !match.match(/^\d+$/) // exclude pure numbers
-        )
-        .slice(0, 3); // limit to 3 teams max
+    // Enhanced query type detection - do this BEFORE team detection
+    const queryTypes = {
+        score: /\b(score|result|final|goals?)\b/i,
+        odds: /\b(odds?|betting|bet|price|value)\b/i,
+        analysis: /\b(analysis|analyze|predict|statistics|stats)\b/i,
+        accumulator: /\b(acca|accumulator|combo|parlay|multiple)\b/i,
+        head2head: /\b(head to head|h2h|versus|vs|against)\b/i,
+        live: /\b(live|now|current)\b/i,
+        finished: /\b(finished|completed|final|result)\b/i
+    };
+
+    Object.entries(queryTypes).forEach(([type, pattern]) => {
+        if (pattern.test(lowerQuery)) {
+            result.queryType = type;
+        }
+    });
+
+    // Skip team detection for accumulator queries - they should get all upcoming matches
+    if (result.queryType !== 'accumulator') {
+        result.teams = [...new Set(allMatches)]
+            .filter(match => 
+                match.length > 2 && 
+                !EXCLUDED_WORDS.includes(match) &&
+                !match.match(/^\d+$/) // exclude pure numbers
+            )
+            .slice(0, 3); // limit to 3 teams max
+    } else {
+        result.teams = []; // No team filtering for accumulator queries
+    }
 
     // Enhanced league detection
     const leagueKeywords = {
@@ -538,23 +561,6 @@ function parseUserQueryEnhanced(query) {
         const fullYear = year.length === 2 ? `20${year}` : year;
         result.specificDate = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     }
-
-    // Enhanced query type detection
-    const queryTypes = {
-        score: /\b(score|result|final|goals?)\b/i,
-        odds: /\b(odds?|betting|bet|price|value)\b/i,
-        analysis: /\b(analysis|analyze|predict|statistics|stats)\b/i,
-        accumulator: /\b(acca|accumulator|combo|parlay|multiple)\b/i,
-        head2head: /\b(head to head|h2h|versus|vs|against)\b/i,
-        live: /\b(live|now|current)\b/i,
-        finished: /\b(finished|completed|final|result)\b/i
-    };
-
-    Object.entries(queryTypes).forEach(([type, pattern]) => {
-        if (pattern.test(lowerQuery)) {
-            result.queryType = type;
-        }
-    });
 
     // Set search operator based on query specificity
     if (lowerQuery.includes('exactly') || lowerQuery.includes('exact')) {
