@@ -470,6 +470,15 @@ header p {
 }
 
 /* Specific cell styling */
+.date-cell {
+    font-weight: 600;
+    color: #374151;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 13px;
+    width: 80px;
+    background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+}
+
 .time-cell {
     font-weight: 700;
     color: #4F46E5;
@@ -494,28 +503,33 @@ header p {
     min-width: 55px;
 }
 
-/* Style odds columns differently */
-.message-content td:nth-child(3),
-.message-content td:nth-child(4), 
-.message-content td:nth-child(5) {
+/* Style columns by position (with Date as first column) */
+.message-content td:nth-child(1) {
+    font-weight: 600;
+    color: #374151;
+    font-family: 'SF Mono', Monaco, monospace;
+    background: linear-gradient(135deg, #F8FAFC, #F1F5F9);
+}
+
+.message-content td:nth-child(2) {
+    font-weight: bold;
+    color: #4F46E5;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+.message-content td:nth-child(3) {
+    font-weight: 600;
+    color: #1F2937;
+}
+
+.message-content td:nth-child(4),
+.message-content td:nth-child(5), 
+.message-content td:nth-child(6) {
     font-weight: bold;
     color: #059669;
     text-align: center;
     background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
     border-left: 2px solid #10B981;
-}
-
-/* Match names should be more prominent */
-.message-content td:nth-child(2) {
-    font-weight: 600;
-    color: #1F2937;
-}
-
-/* Time column styling */
-.message-content td:nth-child(1) {
-    font-weight: bold;
-    color: #4F46E5;
-    font-family: 'SF Mono', Monaco, monospace;
 }
 
 /* Add visual separator between sections */

@@ -688,7 +688,7 @@ This is a conversational question, not about football matches or betting. Respon
                 date: queryInfo.dateContext,
                 operator: queryInfo.operator,
                 includeFinished: queryInfo.includeFinished,
-                limit: 50
+                limit: 500
             };
 
             if (queryInfo.specificDate) {
@@ -752,12 +752,13 @@ This is a conversational question, not about football matches or betting. Respon
         if (uniqueMatches.length > 0) {
             contextData = `📋 UPCOMING MATCHES TABLE\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
             
-            // Create table header
-            contextData += `| Time  | Match | Home Win | Draw | Away Win | League |\n`;
-            contextData += `|-------|-------|----------|------|----------|--------|\n`;
+            // Create table header with Date column
+            contextData += `| Date | Time | Match | Home Win | Draw | Away Win | League |\n`;
+            contextData += `|------|------|-------|----------|------|----------|--------|\n`;
             
             // Add table rows
             contextData += uniqueMatches.slice(0, 15).map(match => {
+                const date = match.Date || 'TBD';
                 const time = match.Time ? match.Time.substring(0, 5) : 'TBD';
                 const homeTeam = match.Home || 'TBD';
                 const awayTeam = match.Away || 'TBD';
@@ -770,12 +771,11 @@ This is a conversational question, not about football matches or betting. Respon
                 
                 const league = match.League ? match.League.substring(0, 15) + (match.League.length > 15 ? '...' : '') : 'Unknown';
                 
-                return `| ${time} | ${matchup} | ${homeOdds} | ${drawOdds} | ${awayOdds} | ${league} |`;
+                return `| ${date} | ${time} | ${matchup} | ${homeOdds} | ${drawOdds} | ${awayOdds} | ${league} |`;
             }).join('\n');
             
             contextData += `\n\n📊 Additional Data Available:\n`;
             contextData += `- ELO Ratings for analysis\n`;
-            contextData += `- Match dates: ${uniqueMatches[0]?.Date || 'TBD'}\n`;
             contextData += `- Status information available\n`;
         } else {
             contextData = `📋 UPCOMING MATCHES TABLE\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
@@ -874,14 +874,15 @@ IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.leng
 
 ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
 
-| Time | Match | Home | Draw | Away |
-|------|-------|------|------|------|
-| 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
-| 19:30 | Team C vs Team D | 1.8 | 3.2 | 4.1 |
+| Date | Time | Match | Home | Draw | Away |
+|------|------|-------|------|------|------|
+| 2025-08-12 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
+| 2025-08-12 | 19:30 | Team C vs Team D | 1.8 | 3.2 | 4.1 |
 
 Rules:
 - Use proper markdown table syntax with | separators
 - No ASCII art tables with dashes and characters
+- Include Date column in YYYY-MM-DD format
 - Keep team names concise 
 - Show odds to 1 decimal place
 - Include all matches from the provided data

@@ -383,11 +383,12 @@ class ClaudeBettingBot {
             if (dataCells.length > 0) {
                 html += '<tr>\n';
                 dataCells.forEach((cell, index) => {
-                    // Add classes for different column types
+                    // Add classes for different column types (with Date as first column)
                     let cellClass = '';
-                    if (index === 0) cellClass = 'time-cell';
-                    else if (index === 1) cellClass = 'match-cell';
-                    else if (index >= 2) cellClass = 'odds-cell';
+                    if (index === 0) cellClass = 'date-cell';
+                    else if (index === 1) cellClass = 'time-cell';
+                    else if (index === 2) cellClass = 'match-cell';
+                    else if (index >= 3) cellClass = 'odds-cell';
                     
                     html += `<td class="${cellClass}">${cell.trim()}</td>\n`;
                 });
@@ -528,7 +529,7 @@ window.quickAction = function(action) {
     
     switch (action) {
         case 'upcoming_matches':
-            message = 'Show me upcoming matches for today and tomorrow';
+            message = 'Show me interesting upcoming matches from the next few days with good betting opportunities';
             break;
         case 'high_confidence':
             message = 'Show me high confidence betting opportunities';
