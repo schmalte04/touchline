@@ -465,6 +465,34 @@ class ClaudeBettingBot {
         // Format xG data
         formatted = formatted.replace(/xG[:\s]*([\d.]+)/gi, '<span class="xg-data">xG: $1</span>');
         
+        // Format bookmaker names as clickable buttons for future affiliate links
+        const bookmakers = {
+            'Bet365': 'bet365',
+            'Tipico': 'tipico', 
+            'Betway': 'betway',
+            'William Hill': 'williamhill',
+            'Ladbrokes': 'ladbrokes',
+            'Paddy Power': 'paddypower',
+            'Unibet': 'unibet',
+            'Bwin': 'bwin',
+            'Sky Bet': 'skybet',
+            'Coral': 'coral'
+        };
+        
+        Object.entries(bookmakers).forEach(([name, slug]) => {
+            // Match bookmaker names in quotes or when mentioned as recommendations
+            const patterns = [
+                new RegExp(`"(${name})"`, 'gi'),
+                new RegExp(`\\b(${name})\\b(?=\\s*(?:for|to|at|on|with))`, 'gi')
+            ];
+            
+            patterns.forEach(pattern => {
+                formatted = formatted.replace(pattern, (match, bookmakerName) => {
+                    return `<button class="bookmaker-btn" data-bookmaker="${slug}" onclick="window.openBookmaker('${slug}')">${bookmakerName}</button>`;
+                });
+            });
+        });
+        
         // Temporarily disabled team matchup formatting to avoid false matches
         // formatted = formatted.replace(/\b([A-Z][a-zA-Z\s]{2,15})\s+vs\s+([A-Z][a-zA-Z\s]{2,15})\b/g, '<span class="match-teams">$1 vs $2</span>');
         
@@ -549,6 +577,37 @@ window.quickAction = function(action) {
     window.claudeBot.sendMessage();
 };
 
+// Bookmaker redirection function for future affiliate links
+window.openBookmaker = function(bookmakerSlug) {
+    console.log('🎰 Bookmaker button clicked:', bookmakerSlug);
+    
+    // Future affiliate URLs will be added here
+    const affiliateUrls = {
+        'bet365': 'https://www.bet365.com', // TODO: Add affiliate link
+        'tipico': 'https://www.tipico.com', // TODO: Add affiliate link
+        'betway': 'https://www.betway.com', // TODO: Add affiliate link
+        'williamhill': 'https://www.williamhill.com', // TODO: Add affiliate link
+        'ladbrokes': 'https://www.ladbrokes.com', // TODO: Add affiliate link
+        'paddypower': 'https://www.paddypower.com', // TODO: Add affiliate link
+        'unibet': 'https://www.unibet.com', // TODO: Add affiliate link
+        'bwin': 'https://www.bwin.com', // TODO: Add affiliate link
+        'skybet': 'https://www.skybet.com', // TODO: Add affiliate link
+        'coral': 'https://www.coral.co.uk' // TODO: Add affiliate link
+    };
+    
+    const url = affiliateUrls[bookmakerSlug];
+    if (url) {
+        // Track click for analytics (future implementation)
+        console.log(`📊 Affiliate click tracked: ${bookmakerSlug}`);
+        
+        // Open in new tab
+        window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+        console.error('❌ Unknown bookmaker:', bookmakerSlug);
+    }
+};
+
 console.log('✅ CLAUDE AI SCRIPT LOADED SUCCESSFULLY');
 console.log('💡 You can test messaging by typing: testMessage("your message here") in the console');
 console.log('⚡ Quick actions are now available via quickAction("action_name")');
+console.log('🎰 Bookmaker buttons are now available for affiliate integration');

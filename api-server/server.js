@@ -152,8 +152,8 @@ async function searchMatchesFlexible(searchParams) {
 
         let query = `
             SELECT MATCH_ID, Home, Away, Date, Time, League, Country,
-                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
-                    PH, PD, PA
+                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, p1_skell_xgboost,
+                   PH, PD, PA
             FROM Rawdata_Total 
             WHERE 1=1
         `;
@@ -941,7 +941,12 @@ Rules:
 - Show odds to 1 decimal place
 - Include all matches from the provided data
 
-Then provide brief analysis and recommendations.`;
+Then provide brief analysis and recommendations.
+
+IMPORTANT: When making betting recommendations, END your response with bookmaker suggestions like:
+"You can place this bet on "Bet365", "Tipico", "Betway", or "William Hill" for the best odds."
+
+Use quotes around bookmaker names so they become clickable buttons for users.`;
         }
 
         // Call Claude API

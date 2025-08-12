@@ -802,3 +802,66 @@ header p {
         padding: 2px 6px;
     }
 }
+
+/* Bookmaker buttons for affiliate integration */
+.bookmaker-btn {
+    background: linear-gradient(135deg, #10B981, #059669);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    margin: 4px 6px 4px 0;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.bookmaker-btn:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+}
+
+.bookmaker-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+/* Special styling for different bookmakers */
+.bookmaker-btn[data-bookmaker="bet365"] {
+    background: linear-gradient(135deg, #F1C232, #BF9000);
+}
+
+.bookmaker-btn[data-bookmaker="bet365"]:hover {
+    background: linear-gradient(135deg, #BF9000, #9C7500);
+}
+
+.bookmaker-btn[data-bookmaker="tipico"] {
+    background: linear-gradient(135deg, #E53E3E, #C53030);
+}
+
+.bookmaker-btn[data-bookmaker="tipico"]:hover {
+    background: linear-gradient(135deg, #C53030, #9B2C2C);
+}
+
+.bookmaker-btn[data-bookmaker="betway"] {
+    background: linear-gradient(135deg, #2D3748, #1A202C);
+}
+
+.bookmaker-btn[data-bookmaker="betway"]:hover {
+    background: linear-gradient(135deg, #1A202C, #171923);
+}
+
+/* Mobile responsive bookmaker buttons */
+@media (max-width: 768px) {
+    .bookmaker-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin: 3px 4px 3px 0;
+    }
+}
