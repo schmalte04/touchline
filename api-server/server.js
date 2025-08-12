@@ -142,6 +142,7 @@ async function searchMatchesFlexible(searchParams) {
         const { 
             team = null, 
             league = null, 
+            country = null,
             date = null, 
             status = null,
             operator = 'contains',  // contains, equals, starts_with, ends_with
@@ -150,7 +151,7 @@ async function searchMatchesFlexible(searchParams) {
         } = searchParams;
 
         let query = `
-            SELECT MATCH_ID, Home, Away, Date, Time, League, 
+            SELECT MATCH_ID, Home, Away, Date, Time, League, Country,
                    Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
                     PH, PD, PA
             FROM Rawdata_Total 
@@ -184,10 +185,23 @@ async function searchMatchesFlexible(searchParams) {
             conditions.push(teamCondition);
         }
 
-        // League filter
+        // League filter - handle special cases for English leagues
         if (league) {
-            conditions.push(`League LIKE ?`);
-            params.push(`%${league}%`);
+            if (league === 'Premier League' || league.toLowerCase().includes('english')) {
+                // For English/Premier League, include multiple English competitions
+                conditions.push(`(League LIKE ? OR League LIKE ? OR League LIKE ? OR League LIKE ?)`);
+                params.push('%Premier League%', '%Championship%', '%League One%', '%League Two%');
+            } else {
+                conditions.push(`League LIKE ?`);
+                params.push(`%${league}%`);
+            }
+        }
+
+        // Country filter - prioritize this for country-based queries
+        if (country) {
+            conditions.push(`Country = ?`);
+            params.push(country);
+            console.log(`🌍 Adding country filter: Country = "${country}"`);
         }
 
         // Date filter
@@ -451,6 +465,7 @@ function parseUserQueryEnhanced(query) {
     const result = {
         teams: [],
         leagues: [],
+        countries: [],
         dateContext: 'upcoming',
         queryType: 'general',
         specificDate: null,
@@ -522,12 +537,45 @@ function parseUserQueryEnhanced(query) {
         'serie a': 'Serie A',
         'ligue 1': 'Ligue 1',
         'mls': 'MLS',
-        'epl': 'Premier League'
+        'epl': 'Premier League',
+        'championship': 'Championship',
+        'league one': 'League One',
+        'league two': 'League Two'
     };
 
+    // Country detection for database Country field
+    const countryKeywords = {
+        'english': 'England',
+        'england': 'England',
+        'english football': 'England',
+        'english matches': 'England',
+        'german': 'Germany', 
+        'germany': 'Germany',
+        'spanish': 'Spain',
+        'spain': 'Spain',
+        'italian': 'Italy',
+        'italy': 'Italy',
+        'french': 'France',
+        'france': 'France',
+        'american': 'USA',
+        'usa': 'USA',
+        'united states': 'USA'
+    };
+
+    // Check for countries first
+    result.countries = [];
+    Object.entries(countryKeywords).forEach(([keyword, country]) => {
+        if (lowerQuery.includes(keyword)) {
+            result.countries.push(country);
+            console.log(`🌍 Country detected: "${keyword}" -> "${country}"`);
+        }
+    });
+
+    // Then check for specific leagues
     Object.entries(leagueKeywords).forEach(([keyword, league]) => {
         if (lowerQuery.includes(keyword)) {
             result.leagues.push(league);
+            console.log(`🏆 League detected: "${keyword}" -> "${league}"`);
         }
     });
 
@@ -584,6 +632,7 @@ function parseUserQueryEnhanced(query) {
     result.searchFilters = {
         team: result.teams[0] || null,
         league: result.leagues[0] || null,
+        country: result.countries[0] || null,
         date: result.dateContext,
         operator: result.operator,
         includeFinished: result.includeFinished
@@ -672,6 +721,7 @@ This is a conversational question, not about football matches or betting. Respon
         console.log(`🔍 Enhanced parsed query:`, queryInfo);
         console.log(`🔍 Date context detected: ${queryInfo.dateContext}`);
         console.log(`🔍 Teams detected: ${queryInfo.teams}`);
+        console.log(`🔍 Countries detected: ${queryInfo.countries}`);
         console.log(`🔍 Search filters:`, queryInfo.searchFilters);
 
         let relevantMatches = [];
@@ -679,13 +729,14 @@ This is a conversational question, not about football matches or betting. Respon
         let isRealData = true;
 
         // Use flexible search approach inspired by MCP
-        if (queryInfo.teams.length > 0 || queryInfo.leagues.length > 0) {
-            console.log(`🎯 Processing team/league-specific query with flexible search...`);
+        if (queryInfo.teams.length > 0 || queryInfo.leagues.length > 0 || queryInfo.countries.length > 0) {
+            console.log(`🎯 Processing team/league/country-specific query with flexible search...`);
             
             // Build search parameters for flexible search
             const searchParams = {
                 team: queryInfo.teams[0],
                 league: queryInfo.leagues[0],
+                country: queryInfo.countries[0],
                 date: queryInfo.dateContext,
                 operator: queryInfo.operator,
                 includeFinished: queryInfo.includeFinished,
@@ -703,11 +754,12 @@ This is a conversational question, not about football matches or betting. Respon
             // Build context description
             const teamPart = queryInfo.teams[0] ? `for ${queryInfo.teams[0]}` : '';
             const leaguePart = queryInfo.leagues[0] ? `in ${queryInfo.leagues[0]}` : '';
+            const countryPart = queryInfo.countries[0] ? `in ${queryInfo.countries[0]}` : '';
             const datePart = queryInfo.dateContext === 'today' ? 'today' : 
                            queryInfo.dateContext === 'tomorrow' ? 'tomorrow' :
                            queryInfo.specificDate ? `on ${queryInfo.specificDate}` : 'upcoming';
             
-            contextDescription = `Matches ${teamPart} ${leaguePart} ${datePart}`.trim();
+            contextDescription = `Matches ${teamPart} ${leaguePart} ${countryPart} ${datePart}`.trim();
 
         } else if (queryInfo.queryType === 'accumulator') {
             console.log(`🎯 Processing accumulator request - getting upcoming matches...`);
@@ -753,9 +805,9 @@ This is a conversational question, not about football matches or betting. Respon
         if (uniqueMatches.length > 0) {
             contextData = `📋 UPCOMING MATCHES TABLE\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
             
-            // Create table header with Date column
-            contextData += `| Date | Time | Match | Home Win | Draw | Away Win | League |\n`;
-            contextData += `|------|------|-------|----------|------|----------|--------|\n`;
+            // Create table header with Date and Country columns
+            contextData += `| Date | Time | Match | Home | Draw | Away | League | Country |\n`;
+            contextData += `|------|------|-------|------|------|------|--------|--------|\n`;
             
             // Add table rows
             contextData += uniqueMatches.slice(0, 15).map(match => {
@@ -771,15 +823,16 @@ This is a conversational question, not about football matches or betting. Respon
                 const awayOdds = match.PA ? parseFloat(match.PA).toFixed(1) : 'N/A';
                 
                 const league = match.League ? match.League.substring(0, 15) + (match.League.length > 15 ? '...' : '') : 'Unknown';
+                const country = match.Country || 'Unknown';
                 
-                return `| ${date} | ${time} | ${matchup} | ${homeOdds} | ${drawOdds} | ${awayOdds} | ${league} |`;
+                return `| ${date} | ${time} | ${matchup} | ${homeOdds} | ${drawOdds} | ${awayOdds} | ${league} | ${country} |`;
             }).join('\n');
             
             contextData += `\n\n📊 Additional Data Available:\n`;
             contextData += `- ELO Ratings for analysis\n`;
             contextData += `- Status information available\n`;
         } else {
-            contextData = `📋 UPCOMING MATCHES TABLE\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
+            contextData = `📋 UPCOMING MATCHES TABLE\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Countries searched: ${queryInfo.countries.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
         }
 
         // Create a more specific prompt based on query type
