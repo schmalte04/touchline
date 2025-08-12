@@ -7,9 +7,26 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
+    <!-- Password Protection Overlay -->
+    <div id="passwordOverlay" class="password-overlay">
+        <div class="password-container">
+            <div class="password-header">
+                <h2>🔐 Access Required</h2>
+                <p>Please enter the password to access Touchline Betting Assistant</p>
+            </div>
+            <div class="password-form">
+                <input type="password" id="passwordInput" placeholder="Enter password..." autocomplete="off">
+                <button id="passwordSubmit">Enter</button>
+                <div id="passwordError" class="password-error" style="display: none;">
+                    ❌ Incorrect password. Please try again.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContent" style="display: none;">
         <header>
-            <h1>🎯 Smart Betting Assistant</h1>
+            <h1>🎯 Touchline Betting Assistant</h1>
             <p>AI-powered accumulator betting with advanced match analysis</p>
         </header>
 
@@ -96,5 +113,85 @@
     </div>
 
         <script src="script-claude.js?v=20250811d"></script>
+        <script>
+            // Password protection system
+            document.addEventListener('DOMContentLoaded', function() {
+                const passwordOverlay = document.getElementById('passwordOverlay');
+                const mainContent = document.getElementById('mainContent');
+                const passwordInput = document.getElementById('passwordInput');
+                const passwordSubmit = document.getElementById('passwordSubmit');
+                const passwordError = document.getElementById('passwordError');
+                
+                // Check if user is already authenticated (for development)
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                if (isLocalhost) {
+                    // Skip password on localhost for development
+                    showMainContent();
+                    return;
+                }
+                
+                // Check session storage for authentication
+                if (sessionStorage.getItem('authenticated') === 'true') {
+                    showMainContent();
+                    return;
+                }
+                
+                async function checkPassword() {
+                    const enteredPassword = passwordInput.value.trim();
+                    if (!enteredPassword) {
+                        passwordError.textContent = '❌ Please enter a password';
+                        passwordError.style.display = 'block';
+                        return;
+                    }
+                    
+                    try {
+                        passwordSubmit.disabled = true;
+                        passwordSubmit.textContent = 'Checking...';
+                        
+                        const response = await fetch('/api/validate-password', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ password: enteredPassword })
+                        });
+                        
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            sessionStorage.setItem('authenticated', 'true');
+                            showMainContent();
+                        } else {
+                            passwordError.textContent = '❌ Incorrect password. Please try again.';
+                            passwordError.style.display = 'block';
+                            passwordInput.value = '';
+                            passwordInput.focus();
+                        }
+                    } catch (error) {
+                        console.error('Password validation error:', error);
+                        passwordError.textContent = '❌ Connection error. Please try again.';
+                        passwordError.style.display = 'block';
+                    } finally {
+                        passwordSubmit.disabled = false;
+                        passwordSubmit.textContent = 'Enter';
+                    }
+                }
+                
+                function showMainContent() {
+                    passwordOverlay.style.display = 'none';
+                    mainContent.style.display = 'block';
+                }
+                
+                passwordSubmit.addEventListener('click', checkPassword);
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        checkPassword();
+                    }
+                });
+                
+                // Focus on password input
+                passwordInput.focus();
+            });
+        </script>
 </body>
 </html>

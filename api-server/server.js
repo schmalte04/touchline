@@ -605,7 +605,7 @@ app.post('/api/chat', async (req, res) => {
 
         // Handle initialization/welcome message
         if (context === 'initialization' || userQuery.toLowerCase().includes('introduce yourself')) {
-            const welcomeMessage = `Hello! 👋 I'm your Smart Betting Assistant powered by Touch Line, Goal Analytics and GainR.
+            const welcomeMessage = `Hello! 👋 I'm your Touchline Betting Assistant.
 
 How are you doing today? Are you ready to build some winning accumulator bets? 🚀`;
             
@@ -943,6 +943,28 @@ app.get('/api/health', async (req, res) => {
             status: 'error',
             error: error.message,
             timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Password validation endpoint
+app.post('/api/validate-password', (req, res) => {
+    try {
+        const { password } = req.body;
+        const correctPassword = process.env.WEBSITE_PASSWORD || 'Touchline2024!';
+        
+        console.log('🔐 Password validation attempt');
+        
+        if (password === correctPassword) {
+            res.json({ success: true, message: 'Access granted' });
+        } else {
+            res.json({ success: false, message: 'Invalid password' });
+        }
+    } catch (error) {
+        console.error('❌ Password validation error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
         });
     }
 });
