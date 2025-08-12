@@ -80,20 +80,35 @@ async function testDatabaseConnection() {
     }
 }
 
-// Helper function to get upcoming matches from MySQL
+// Helper function to get upcoming matches from MySQL with precise filtering
 async function getUpcomingMatches(days = 7) {
     try {
+        // First get today's date in the correct format
+        const todayQuery = `SELECT CURDATE() as today`;
+        const [dateRows] = await pool.execute(todayQuery);
+        const today = dateRows[0].today;
+        console.log(`📅 Current MySQL date: ${today}`);
+        
         const query = `
-            SELECT * FROM Rawdata_Total 
-            WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-            AND (STATUS != 'FT' OR STATUS IS NULL)
-            ORDER BY Date, Time
+            SELECT MATCH_ID, Home, Away, Date, Time, League, 
+                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
+                   xG_Home, xG_Away, PH, PD, PA
+            FROM Rawdata_Total 
+            WHERE Date >= CURDATE() 
+            AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+            AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
+            ORDER BY Date ASC, Time ASC
             LIMIT 100
         `;
         
-        console.log(`📅 Querying upcoming matches (STATUS != FT) for next ${days} days...`);
+        console.log(`📅 Querying upcoming matches with precise STATUS filtering for next ${days} days...`);
         const [rows] = await pool.execute(query, [days]);
-        console.log(`✅ Found ${rows.length} upcoming matches with STATUS != FT`);
+        console.log(`✅ Found ${rows.length} upcoming matches with precise filtering`);
+        
+        // Log sample of results for debugging
+        if (rows.length > 0) {
+            console.log(`📊 Sample results: ${rows.slice(0, 3).map(r => `${r.Home} vs ${r.Away} (${r.Date}, STATUS: ${r.STATUS})`).join(', ')}`);
+        }
         
         return rows;
     } catch (error) {
@@ -102,18 +117,23 @@ async function getUpcomingMatches(days = 7) {
     }
 }
 
-// Helper function to search matches by team name
+// Helper function to search matches by team name with precise filtering
 async function searchMatchesByTeam(teamName) {
     try {
         const query = `
-            SELECT * FROM Rawdata_Total 
-            WHERE (Home LIKE ? OR Away LIKE ?) AND Date >= CURDATE() AND (STATUS != 'FT' OR STATUS IS NULL)
-            ORDER BY Date, Time
+            SELECT MATCH_ID, Home, Away, Date, Time, League, 
+                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
+                   xG_Home, xG_Away, PH, PD, PA
+            FROM Rawdata_Total 
+            WHERE (Home LIKE ? OR Away LIKE ?) 
+            AND Date >= CURDATE() 
+            AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
+            ORDER BY Date ASC, Time ASC
             LIMIT 50
         `;
         
         const searchTerm = `%${teamName}%`;
-        console.log(`🔍 Searching matches for team: ${teamName} (STATUS != FT)`);
+        console.log(`🔍 Searching matches for team: "${teamName}" with precise filtering`);
         const [rows] = await pool.execute(query, [searchTerm, searchTerm]);
         console.log(`✅ Found ${rows.length} upcoming matches for team "${teamName}"`);
         
@@ -145,18 +165,27 @@ async function searchMatchesByTeamAndDate(teamName, date) {
     }
 }
 
-// Helper function to get matches for today
+// Helper function to get matches for today with precise filtering
 async function getTodaysMatches() {
     try {
         const query = `
-            SELECT * FROM Rawdata_Total 
-            WHERE Date = CURDATE() AND (STATUS != 'FT' OR STATUS IS NULL)
-            ORDER BY Time
+            SELECT MATCH_ID, Home, Away, Date, Time, League, 
+                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
+                   xG_Home, xG_Away, PH, PD, PA
+            FROM Rawdata_Total 
+            WHERE Date = CURDATE() 
+            AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
+            ORDER BY Time ASC
         `;
         
-        console.log(`📅 Querying matches for today (STATUS != FT)...`);
+        console.log(`📅 Querying today's matches with precise STATUS filtering...`);
         const [rows] = await pool.execute(query);
         console.log(`✅ Found ${rows.length} upcoming matches for today`);
+        
+        // Log sample for debugging
+        if (rows.length > 0) {
+            console.log(`📊 Today's matches sample: ${rows.slice(0, 2).map(r => `${r.Home} vs ${r.Away} (STATUS: ${r.STATUS})`).join(', ')}`);
+        }
         
         return rows;
     } catch (error) {
@@ -228,16 +257,20 @@ async function getTomorrowsMatches() {
     }
 }
 
-// Helper function to get matches for a specific date
+// Helper function to get matches for a specific date with precise filtering
 async function getMatchesForDate(date) {
     try {
         const query = `
-            SELECT * FROM Rawdata_Total 
-            WHERE Date = ? AND (STATUS != 'FT' OR STATUS IS NULL)
-            ORDER BY Time
+            SELECT MATCH_ID, Home, Away, Date, Time, League, 
+                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
+                   xG_Home, xG_Away, PH, PD, PA
+            FROM Rawdata_Total 
+            WHERE Date = ? 
+            AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
+            ORDER BY Time ASC
         `;
         
-        console.log(`📅 Querying upcoming matches for date: ${date} (STATUS != FT)...`);
+        console.log(`📅 Querying upcoming matches for date: ${date} with precise filtering...`);
         const [rows] = await pool.execute(query, [date]);
         console.log(`✅ Found ${rows.length} upcoming matches for ${date}`);
         
@@ -248,53 +281,80 @@ async function getMatchesForDate(date) {
     }
 }
 
-// Helper function to parse query and determine what the user wants
+// Helper function to parse query and determine what the user wants - precise approach
 function parseUserQuery(query) {
     const lowerQuery = query.toLowerCase();
+    console.log(`🔍 Parsing query: "${query}"`);
     
-    // Extract team names (look for capitalized words that could be team names)
+    // Define command words to exclude from team detection
+    const COMMAND_WORDS = [
+        'show', 'get', 'find', 'tell', 'give', 'what', 'when', 'where', 'how', 'which',
+        'today', 'tomorrow', 'yesterday', 'next', 'last', 'this', 'the', 'matches', 
+        'games', 'fixtures', 'analysis', 'odds', 'betting', 'premier', 'league', 
+        'champions', 'europa', 'cup', 'championship', 'for', 'me', 'please', 'can',
+        'august', 'july', 'september', 'january', 'february', 'march', 'april', 
+        'may', 'june', 'october', 'november', 'december', 'monday', 'tuesday', 
+        'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
+    ];
+    
+    // Extract potential team names (capitalized words)
     const teamMatches = query.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
     const potentialTeams = teamMatches.filter(match => 
         match.length > 2 && 
-        !['Show', 'Get', 'Find', 'Tell', 'Give', 'What', 'When', 'Where', 'How', 'Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The', 'August', 'July', 'September', 'January', 'February', 'March', 'April', 'May', 'June', 'October', 'November', 'December', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Matches', 'Games', 'Fixtures', 'Analysis', 'Odds', 'Betting', 'Premier', 'League', 'Champions', 'Europa', 'Cup', 'Championship'].includes(match)
+        !COMMAND_WORDS.includes(match.toLowerCase()) &&
+        // Additional filters for common false positives
+        !match.match(/^\d+/) && // Don't include numbers
+        match !== 'August' && match !== 'Premier' && match !== 'League'
     );
     
-    // Determine date context - enhanced to detect specific dates
+    console.log(`🎯 Potential teams detected: ${potentialTeams.join(', ')}`);
+    
+    // Determine date context with more precise detection
     let dateContext = 'upcoming';
     let specificDate = null;
     
     if (lowerQuery.includes('today')) {
         dateContext = 'today';
+        console.log(`📅 Date context: today`);
     } else if (lowerQuery.includes('tomorrow')) {
         dateContext = 'tomorrow';
+        console.log(`📅 Date context: tomorrow`);
     } else if (lowerQuery.includes('yesterday')) {
         dateContext = 'yesterday';
-    } else if (lowerQuery.includes('august 12') || lowerQuery.includes('august 12th') || lowerQuery.includes('12th august') || lowerQuery.includes('2025-08-12')) {
+        console.log(`📅 Date context: yesterday`);
+    } else if (lowerQuery.includes('august 12') || lowerQuery.includes('12th august') || 
+               lowerQuery.includes('12 august') || lowerQuery.includes('2025-08-12')) {
         dateContext = 'specific';
         specificDate = '2025-08-12';
+        console.log(`📅 Date context: specific date (${specificDate})`);
     }
     
-    // Determine query type
+    // Determine query type with more precision
     let queryType = 'general';
-    if (lowerQuery.includes('score') || lowerQuery.includes('result')) {
+    if (lowerQuery.includes('score') || lowerQuery.includes('result') || lowerQuery.includes('final')) {
         queryType = 'score';
-    } else if (lowerQuery.includes('odds') || lowerQuery.includes('betting')) {
+    } else if (lowerQuery.includes('odds') || lowerQuery.includes('betting') || lowerQuery.includes('bet')) {
         queryType = 'odds';
-    } else if (lowerQuery.includes('prediction') || lowerQuery.includes('analysis')) {
+    } else if (lowerQuery.includes('prediction') || lowerQuery.includes('analysis') || lowerQuery.includes('analyze')) {
         queryType = 'analysis';
     } else if (lowerQuery.includes('matches') || lowerQuery.includes('games') || lowerQuery.includes('fixtures')) {
         queryType = 'matches';
-    } else if (lowerQuery.includes('acca') || lowerQuery.includes('accumulator')) {
+    } else if (lowerQuery.includes('acca') || lowerQuery.includes('accumulator') || lowerQuery.includes('build')) {
         queryType = 'accumulator';
     }
     
-    return {
+    console.log(`📋 Query type: ${queryType}`);
+    
+    const result = {
         teams: potentialTeams,
         dateContext,
         queryType,
         specificDate,
         originalQuery: query
     };
+    
+    console.log(`✅ Parsed query result:`, result);
+    return result;
 }
 
 // Fallback mock data if MySQL fails
@@ -417,33 +477,38 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
 
         console.log(`📊 Found ${uniqueMatches.length} relevant matches for query`);
 
-        // Format match data for Claude with more detail
+        // Format match data for Claude with structured precision
         let contextData = '';
         if (uniqueMatches.length > 0) {
-            contextData = `📋 I'm now looking in Rawdata_Total database table...\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
+            contextData = `📋 RAWDATA_TOTAL DATABASE QUERY RESULTS\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
             contextData += uniqueMatches.slice(0, 15).map(match => {
+                // Use precise column mapping from database
                 const homeElo = match.ELO_Home || 'N/A';
                 const awayElo = match.ELO_Away || 'N/A';
-                const homeXg = match.xG_Home || 'N/A';
-                const awayXg = match.xG_Away || 'N/A';
-                const homeScore = match.Score_Home !== undefined ? match.Score_Home : 'TBD';
-                const awayScore = match.Score_Away !== undefined ? match.Score_Away : 'TBD';
+                const homeXg = match.xG_Home ? parseFloat(match.xG_Home).toFixed(2) : 'N/A';
+                const awayXg = match.xG_Away ? parseFloat(match.xG_Away).toFixed(2) : 'N/A';
+                const homeScore = match.Score_Home !== null && match.Score_Home !== undefined ? match.Score_Home : 'TBD';
+                const awayScore = match.Score_Away !== null && match.Score_Away !== undefined ? match.Score_Away : 'TBD';
                 
-                // Use correct column names from database schema
-                const homeOdds = match.PH || match.Odds_Home || 'N/A';
-                const drawOdds = match.PD || match.Odds_Draw || 'N/A';
-                const awayOdds = match.PA || match.Odds_Away || 'N/A';
+                // Use correct database column names (PH, PD, PA)
+                const homeOdds = match.PH ? parseFloat(match.PH).toFixed(2) : 'N/A';
+                const drawOdds = match.PD ? parseFloat(match.PD).toFixed(2) : 'N/A';
+                const awayOdds = match.PA ? parseFloat(match.PA).toFixed(2) : 'N/A';
                 
-                return `🏆 Match ${match.MATCH_ID}: ${match.Home} vs ${match.Away}
-📅 Date: ${match.Date} ${match.Time || ''}
+                // Status information
+                const status = match.STATUS || 'NS';
+                
+                return `🏆 MATCH_ID: ${match.MATCH_ID}
+📝 Fixture: ${match.Home} vs ${match.Away}
+📅 Date/Time: ${match.Date} ${match.Time || 'TBD'}
 🏟️ League: ${match.League || 'Unknown'}
-⚽ Score: ${homeScore} - ${awayScore}
+⚽ Current Score: ${homeScore} - ${awayScore} (STATUS: ${status})
 📊 ELO Ratings: ${homeElo} vs ${awayElo}
-🎯 Expected Goals: ${homeXg} vs ${awayXg}
-💰 Odds: ${homeOdds} / ${drawOdds} / ${awayOdds}`;
+🎯 Expected Goals (xG): ${homeXg} vs ${awayXg}
+💰 Odds [H/D/A]: ${homeOdds} / ${drawOdds} / ${awayOdds}`;
             }).join('\n\n');
         } else {
-            contextData = `📋 I'm now looking in Rawdata_Total database table...\n\nNo matches found for your query: "${userQuery}"`;
+            contextData = `📋 RAWDATA_TOTAL DATABASE QUERY RESULTS\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
         }
 
         // Create a more specific prompt based on query type
