@@ -5,6 +5,9 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const Anthropic = require('@anthropic-ai/sdk');
 
+// Global variable to store executed SQL queries for debugging
+global.lastExecutedQueries = [];
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -92,7 +95,7 @@ async function getUpcomingMatches(days = 7) {
         const query = `
             SELECT MATCH_ID, Home, Away, Date, Time, League, 
                    Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
-                   xG_Home, xG_Away, PH, PD, PA
+                   PH, PD, PA
             FROM Rawdata_Total 
             WHERE Date >= CURDATE() 
             AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
@@ -103,6 +106,15 @@ async function getUpcomingMatches(days = 7) {
         
         console.log(`📅 Querying upcoming matches with precise STATUS filtering for next ${days} days...`);
         console.log(`📋 SQL Query: ${query.trim()}`);
+        
+        // Store query for debugging
+        global.lastExecutedQueries.push({
+            function: 'getUpcomingMatches',
+            query: query.trim(),
+            params: [days],
+            timestamp: new Date().toISOString()
+        });
+        
         const [rows] = await pool.execute(query, [days]);
         console.log(`✅ Found ${rows.length} upcoming matches with precise filtering`);
         
@@ -136,7 +148,7 @@ async function searchMatchesFlexible(searchParams) {
         let query = `
             SELECT MATCH_ID, Home, Away, Date, Time, League, 
                    Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
-                   xG_Home, xG_Away, PH, PD, PA
+                    PH, PD, PA
             FROM Rawdata_Total 
             WHERE 1=1
         `;
@@ -209,6 +221,15 @@ async function searchMatchesFlexible(searchParams) {
         console.log(`🔍 Flexible search with params:`, searchParams);
         console.log(`📋 SQL Query: ${query}`);
         console.log(`📋 Parameters:`, params);
+
+        // Store query for debugging
+        global.lastExecutedQueries.push({
+            function: 'searchMatchesFlexible',
+            query: query,
+            params: params,
+            searchParams: searchParams,
+            timestamp: new Date().toISOString()
+        });
 
         const [rows] = await pool.execute(query, params);
         console.log(`✅ Found ${rows.length} matches with flexible search`);
@@ -305,7 +326,7 @@ async function getTodaysMatches() {
         const query = `
             SELECT MATCH_ID, Home, Away, Date, Time, League, 
                    Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
-                   xG_Home, xG_Away, PH, PD, PA
+                    PH, PD, PA
             FROM Rawdata_Total 
             WHERE Date = CURDATE() 
             AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
@@ -397,8 +418,7 @@ async function getMatchesForDate(date) {
     try {
         const query = `
             SELECT MATCH_ID, Home, Away, Date, Time, League, 
-                   Score_Home, Score_Away, STATUS, ELO_Home, ELO_Away, 
-                   xG_Home, xG_Away, PH, PD, PA
+                   STATUS,  PH, PD, PA
             FROM Rawdata_Total 
             WHERE Date = ? 
             AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
@@ -566,6 +586,9 @@ function parseUserQueryEnhanced(query) {
 // Main chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
+        // Clear previous SQL queries for this request
+        global.lastExecutedQueries = [];
+        
         const { message: userQuery, context } = req.body;
         console.log(`💬 User query: ${userQuery}`);
         console.log(`📋 Context: ${context || 'none'}`);
@@ -723,13 +746,14 @@ This is a conversational question, not about football matches or betting. Respon
                 // Use precise column mapping from database
                 const homeElo = match.ELO_Home || 'N/A';
                 const awayElo = match.ELO_Away || 'N/A';
-                const homeXg = match.xG_Home ? parseFloat(match.xG_Home).toFixed(2) : 'N/A';
+                const homeXg = match.xG ? parseFloat(match.xG).toFixed(2) : 'N/A';
                 const awayXg = match.xG_Away ? parseFloat(match.xG_Away).toFixed(2) : 'N/A';
                 const homeScore = match.Score_Home !== null && match.Score_Home !== undefined ? match.Score_Home : 'TBD';
                 const awayScore = match.Score_Away !== null && match.Score_Away !== undefined ? match.Score_Away : 'TBD';
                 
                 // Use correct database column names (PH, PD, PA)
-                const homeOdds = match.PH ? parseFloat(match.PH).toFixed(2) : 'N/A';
+                const homeOdds = match.PH 
+                ? parseFloat(match.PH).toFixed(2) : 'N/A';
                 const drawOdds = match.PD ? parseFloat(match.PD).toFixed(2) : 'N/A';
                 const awayOdds = match.PA ? parseFloat(match.PA).toFixed(2) : 'N/A';
                 
@@ -867,7 +891,8 @@ Be conversational and specific to their query. Use the exact match data provided
             success: true,
             response: claudeResponse,
             matchCount: uniqueMatches.length,
-            queryInfo: queryInfo
+            queryInfo: queryInfo,
+            sqlQueries: global.lastExecutedQueries || [] // Include executed SQL queries
         });
 
     } catch (error) {

@@ -23,12 +23,10 @@ This database contains comprehensive football match data, betting odds, and anal
 **Statistical Columns**:
 - `ELO_Home` (DECIMAL): Home team ELO rating
 - `ELO_Away` (DECIMAL): Away team ELO rating
-- `xG_Home` (DECIMAL): Home team expected goals
+- `xG` (DECIMAL): Home team expected goals
 - `xG_Away` (DECIMAL): Away team expected goals
 - `HS_Target` (INT): Home team shots
 - `AS_Target` (INT): Away team shots
-- `ShotsOnTarget_Home` (INT): Home team shots on target
-- `ShotsOnTarget_Away` (INT): Away team shots on target
 
 **Betting Odds**:
 - `PH` (DECIMAL): Home win odds
