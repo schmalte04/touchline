@@ -249,6 +249,9 @@ class ClaudeBettingBot {
         let formatted = message;
         let result = '';
         
+        // Convert markdown tables to HTML tables
+        formatted = this.convertMarkdownTables(formatted);
+        
         // Split into lines for better processing
         const lines = formatted.split('\n');
         let currentSection = '';
@@ -315,6 +318,77 @@ class ClaudeBettingBot {
         }
         
         return result;
+    }
+
+    convertMarkdownTables(text) {
+        // Convert markdown tables to HTML
+        const lines = text.split('\n');
+        let result = [];
+        let inTable = false;
+        let tableRows = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Check if this is a table row (contains |)
+            if (line.includes('|') && line.split('|').length > 2) {
+                if (!inTable) {
+                    inTable = true;
+                    tableRows = [];
+                }
+                
+                // Skip separator lines (----)
+                if (!line.includes('---')) {
+                    tableRows.push(line);
+                }
+            } else {
+                // End of table
+                if (inTable) {
+                    result.push(this.createHtmlTable(tableRows));
+                    inTable = false;
+                    tableRows = [];
+                }
+                result.push(line);
+            }
+        }
+        
+        // Handle table at end of text
+        if (inTable && tableRows.length > 0) {
+            result.push(this.createHtmlTable(tableRows));
+        }
+        
+        return result.join('\n');
+    }
+
+    createHtmlTable(rows) {
+        if (rows.length === 0) return '';
+        
+        let html = '<table>\n';
+        
+        // First row is header
+        if (rows.length > 0) {
+            const headerCells = rows[0].split('|').filter(cell => cell.trim() !== '');
+            html += '<tr>\n';
+            headerCells.forEach(cell => {
+                html += `<th>${cell.trim()}</th>\n`;
+            });
+            html += '</tr>\n';
+        }
+        
+        // Remaining rows are data
+        for (let i = 1; i < rows.length; i++) {
+            const dataCells = rows[i].split('|').filter(cell => cell.trim() !== '');
+            if (dataCells.length > 0) {
+                html += '<tr>\n';
+                dataCells.forEach(cell => {
+                    html += `<td>${cell.trim()}</td>\n`;
+                });
+                html += '</tr>\n';
+            }
+        }
+        
+        html += '</table>\n';
+        return html;
     }
 
     processSection(content) {

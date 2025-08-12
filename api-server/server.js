@@ -744,39 +744,38 @@ This is a conversational question, not about football matches or betting. Respon
 
         console.log(`📊 Found ${uniqueMatches.length} relevant matches for query`);
 
-        // Format match data for Claude with structured precision
+        // Format match data for Claude in table format
         let contextData = '';
         if (uniqueMatches.length > 0) {
-            contextData = `📋 RAWDATA_TOTAL DATABASE QUERY RESULTS\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
+            contextData = `📋 UPCOMING MATCHES TABLE\n\n${contextDescription} (${uniqueMatches.length} matches found):\n\n`;
+            
+            // Create table header
+            contextData += `| Time  | Match | Home Win | Draw | Away Win | League |\n`;
+            contextData += `|-------|-------|----------|------|----------|--------|\n`;
+            
+            // Add table rows
             contextData += uniqueMatches.slice(0, 15).map(match => {
-                // Use precise column mapping from database
-                const homeElo = match.ELO_Home || 'N/A';
-                const awayElo = match.ELO_Away || 'N/A';
-                const homeXg = match.xG ? parseFloat(match.xG).toFixed(2) : 'N/A';
-                const awayXg = match.xG_Away ? parseFloat(match.xG_Away).toFixed(2) : 'N/A';
-                const homeScore = match.Score_Home !== null && match.Score_Home !== undefined ? match.Score_Home : 'TBD';
-                const awayScore = match.Score_Away !== null && match.Score_Away !== undefined ? match.Score_Away : 'TBD';
+                const time = match.Time ? match.Time.substring(0, 5) : 'TBD';
+                const homeTeam = match.Home || 'TBD';
+                const awayTeam = match.Away || 'TBD';
+                const matchup = `${homeTeam} vs ${awayTeam}`;
                 
-                // Use correct database column names (PH, PD, PA)
-                const homeOdds = match.PH 
-                ? parseFloat(match.PH).toFixed(2) : 'N/A';
-                const drawOdds = match.PD ? parseFloat(match.PD).toFixed(2) : 'N/A';
-                const awayOdds = match.PA ? parseFloat(match.PA).toFixed(2) : 'N/A';
+                // Format odds
+                const homeOdds = match.PH ? parseFloat(match.PH).toFixed(1) : 'N/A';
+                const drawOdds = match.PD ? parseFloat(match.PD).toFixed(1) : 'N/A';
+                const awayOdds = match.PA ? parseFloat(match.PA).toFixed(1) : 'N/A';
                 
-                // Status information
-                const status = match.STATUS || 'NS';
+                const league = match.League ? match.League.substring(0, 15) + (match.League.length > 15 ? '...' : '') : 'Unknown';
                 
-                return `🏆 MATCH_ID: ${match.MATCH_ID}
-📝 Fixture: ${match.Home} vs ${match.Away}
-📅 Date/Time: ${match.Date} ${match.Time || 'TBD'}
-🏟️ League: ${match.League || 'Unknown'}
-⚽ Current Score: ${homeScore} - ${awayScore} (STATUS: ${status})
-📊 ELO Ratings: ${homeElo} vs ${awayElo}
-🎯 Expected Goals (xG): ${homeXg} vs ${awayXg}
-💰 Odds [H/D/A]: ${homeOdds} / ${drawOdds} / ${awayOdds}`;
-            }).join('\n\n');
+                return `| ${time} | ${matchup} | ${homeOdds} | ${drawOdds} | ${awayOdds} | ${league} |`;
+            }).join('\n');
+            
+            contextData += `\n\n📊 Additional Data Available:\n`;
+            contextData += `- ELO Ratings for analysis\n`;
+            contextData += `- Match dates: ${uniqueMatches[0]?.Date || 'TBD'}\n`;
+            contextData += `- Status information available\n`;
         } else {
-            contextData = `📋 RAWDATA_TOTAL DATABASE QUERY RESULTS\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
+            contextData = `📋 UPCOMING MATCHES TABLE\n\nNo upcoming matches found for query: "${userQuery}"\n\nQuery parameters:\n- Teams searched: ${queryInfo.teams.join(', ') || 'None'}\n- Date context: ${queryInfo.dateContext}\n- Specific date: ${queryInfo.specificDate || 'None'}`;
         }
 
         // Create a more specific prompt based on query type
@@ -868,13 +867,20 @@ User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. Then provide:
-1. Direct answer to the user's question
-2. Relevant statistical insights from the ELO ratings and xG data
-3. Betting recommendations if applicable
-4. Risk assessment for any suggested bets
+IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. Present the data in a clean, readable table format like this:
 
-Be conversational and specific to their query. Use the exact match data provided above.`;
+**⚽ Upcoming Matches**
+
+| Time  | Match | Home | Draw | Away |
+|-------|-------|------|------|------|
+| 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
+
+Then provide:
+1. Direct answer to the user's question  
+2. Brief analysis focusing on best value bets
+3. Simple risk assessment if applicable
+
+Keep the response clean and table-focused. Avoid complex risk analysis sections.`;
         }
 
         // Call Claude API

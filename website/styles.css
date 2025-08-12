@@ -421,6 +421,64 @@ header p {
     font-size: 14px;
 }
 
+/* Table formatting for match data */
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-content th {
+    background: linear-gradient(135deg, #4F46E5, #3B82F6);
+    color: white;
+    padding: 10px 8px;
+    text-align: left;
+    font-weight: bold;
+    font-size: 12px;
+    border-bottom: 2px solid #E5E7EB;
+}
+
+.message-content td {
+    padding: 8px;
+    border-bottom: 1px solid #F3F4F6;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.message-content tr:nth-child(even) {
+    background-color: #F9FAFB;
+}
+
+.message-content tr:hover {
+    background-color: #EFF6FF;
+}
+
+/* Style odds columns differently */
+.message-content td:nth-child(3),
+.message-content td:nth-child(4), 
+.message-content td:nth-child(5) {
+    font-weight: bold;
+    color: #059669;
+    text-align: center;
+}
+
+/* Match names should be more prominent */
+.message-content td:nth-child(2) {
+    font-weight: 600;
+    color: #374151;
+}
+
+/* Time column styling */
+.message-content td:nth-child(1) {
+    font-weight: bold;
+    color: #6366F1;
+    font-family: monospace;
+}
+
 .recommendation {
     background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
     border: 1px solid #BBF7D0;
