@@ -110,10 +110,12 @@ async function getUpcomingMatches(days = 7) {
             console.log(`📊 Sample results: ${rows.slice(0, 3).map(r => `${r.Home} vs ${r.Away} (${r.Date}, STATUS: ${r.STATUS})`).join(', ')}`);
         }
         
-        return rows;
+        // Mark as real data
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error('❌ Error querying upcoming matches:', error);
-        return getMockMatchData();
+        // Return empty results instead of mock data
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -137,10 +139,10 @@ async function searchMatchesByTeam(teamName) {
         const [rows] = await pool.execute(query, [searchTerm, searchTerm]);
         console.log(`✅ Found ${rows.length} upcoming matches for team "${teamName}"`);
         
-        return rows;
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error('❌ Error searching matches by team:', error);
-        return [];
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -158,10 +160,10 @@ async function searchMatchesByTeamAndDate(teamName, date) {
         const [rows] = await pool.execute(query, [searchTerm, searchTerm, date]);
         console.log(`✅ Found ${rows.length} upcoming matches for team "${teamName}" on ${date}`);
         
-        return rows;
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error('❌ Error searching matches by team and date:', error);
-        return [];
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -187,10 +189,10 @@ async function getTodaysMatches() {
             console.log(`📊 Today's matches sample: ${rows.slice(0, 2).map(r => `${r.Home} vs ${r.Away} (STATUS: ${r.STATUS})`).join(', ')}`);
         }
         
-        return rows;
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error('❌ Error querying today\'s matches:', error);
-        return [];
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -247,13 +249,13 @@ async function getTomorrowsMatches() {
             `;
             const [hardcodedRows] = await pool.execute(hardcodedQuery);
             console.log(`✅ Found ${hardcodedRows.length} upcoming matches for 2025-08-12 with hardcoded date`);
-            return hardcodedRows;
+            return { matches: hardcodedRows, isRealData: true };
         }
         
-        return rows;
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error('❌ Error querying tomorrow\'s matches:', error);
-        return [];
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -274,10 +276,10 @@ async function getMatchesForDate(date) {
         const [rows] = await pool.execute(query, [date]);
         console.log(`✅ Found ${rows.length} upcoming matches for ${date}`);
         
-        return rows;
+        return { matches: rows, isRealData: true };
     } catch (error) {
         console.error(`❌ Error querying matches for ${date}:`, error);
-        return [];
+        return { matches: [], isRealData: false };
     }
 }
 
@@ -357,36 +359,6 @@ function parseUserQuery(query) {
     return result;
 }
 
-// Fallback mock data if MySQL fails
-function getMockMatchData() {
-    return [
-        {
-            MATCH_ID: "19352951",
-            Home: "Arsenal",
-            Away: "Chelsea", 
-            Date: "2025-08-12",
-            Time: "15:00",
-            League: "Premier League",
-            ELO_Home: 1850,
-            ELO_Away: 1820,
-            xG_Home: 2.1,
-            xG_Away: 1.8
-        },
-        {
-            MATCH_ID: "19352952", 
-            Home: "Manchester United",
-            Away: "Liverpool",
-            Date: "2025-08-12",
-            Time: "17:30", 
-            League: "Premier League",
-            ELO_Home: 1830,
-            ELO_Away: 1880,
-            xG_Home: 1.9,
-            xG_Away: 2.3
-        }
-    ];
-}
-
 // Main chat endpoint
 app.post('/api/chat', async (req, res) => {
     try {
@@ -417,56 +389,68 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
 
         let relevantMatches = [];
         let contextDescription = '';
+        let isRealData = true;
 
         // Get matches based on the parsed query
         if (queryInfo.teams.length > 0) {
             console.log(`🎯 Processing team-specific query...`);
             // User mentioned specific teams
             for (const team of queryInfo.teams) {
-                let teamMatches = [];
+                let teamResult = { matches: [], isRealData: true };
                 
                 if (queryInfo.dateContext === 'today') {
-                    teamMatches = await searchMatchesByTeamAndDate(team, new Date().toISOString().split('T')[0]);
+                    teamResult = await searchMatchesByTeamAndDate(team, new Date().toISOString().split('T')[0]);
                     contextDescription = `Today's matches for ${team}`;
                 } else if (queryInfo.dateContext === 'tomorrow') {
                     const tomorrow = new Date();
                     tomorrow.setDate(tomorrow.getDate() + 1);
-                    teamMatches = await searchMatchesByTeamAndDate(team, tomorrow.toISOString().split('T')[0]);
+                    teamResult = await searchMatchesByTeamAndDate(team, tomorrow.toISOString().split('T')[0]);
                     contextDescription = `Tomorrow's matches for ${team}`;
                 } else if (queryInfo.dateContext === 'specific' && queryInfo.specificDate) {
-                    teamMatches = await searchMatchesByTeamAndDate(team, queryInfo.specificDate);
+                    teamResult = await searchMatchesByTeamAndDate(team, queryInfo.specificDate);
                     contextDescription = `Matches for ${team} on ${queryInfo.specificDate}`;
                 } else {
-                    teamMatches = await searchMatchesByTeam(team);
+                    teamResult = await searchMatchesByTeam(team);
                     contextDescription = `Upcoming matches for ${team}`;
                 }
                 
-                relevantMatches = [...relevantMatches, ...teamMatches];
+                relevantMatches = [...relevantMatches, ...teamResult.matches];
+                if (!teamResult.isRealData) isRealData = false;
             }
         } else if (queryInfo.dateContext === 'today') {
             console.log(`🎯 Processing today's matches query...`);
             // User asking about today's matches in general
-            relevantMatches = await getTodaysMatches();
+            const result = await getTodaysMatches();
+            relevantMatches = result.matches;
+            isRealData = result.isRealData;
             contextDescription = "Today's matches";
         } else if (queryInfo.dateContext === 'tomorrow') {
             console.log(`🎯 Processing tomorrow's matches query...`);
             // User asking about tomorrow's matches in general
-            relevantMatches = await getTomorrowsMatches();
+            const result = await getTomorrowsMatches();
+            relevantMatches = result.matches;
+            isRealData = result.isRealData;
             contextDescription = "Tomorrow's matches";
         } else if (queryInfo.dateContext === 'specific' && queryInfo.specificDate) {
             console.log(`🎯 Processing specific date query for ${queryInfo.specificDate}...`);
             // User asking about a specific date
-            relevantMatches = await getMatchesForDate(queryInfo.specificDate);
+            const result = await getMatchesForDate(queryInfo.specificDate);
+            relevantMatches = result.matches;
+            isRealData = result.isRealData;
             contextDescription = `Matches on ${queryInfo.specificDate}`;
         } else if (queryInfo.queryType === 'accumulator') {
             console.log(`🎯 Processing accumulator request - getting upcoming matches...`);
             // User wants to create an accumulator - get upcoming matches
-            relevantMatches = await getUpcomingMatches(7);
+            const result = await getUpcomingMatches(7);
+            relevantMatches = result.matches;
+            isRealData = result.isRealData;
             contextDescription = "Upcoming matches for accumulator (next 7 days)";
         } else {
             console.log(`🎯 Processing general upcoming matches query...`);
             // General query - get upcoming matches
-            relevantMatches = await getUpcomingMatches(7);
+            const result = await getUpcomingMatches(7);
+            relevantMatches = result.matches;
+            isRealData = result.isRealData;
             contextDescription = "Upcoming matches (next 7 days)";
         }
 
@@ -533,32 +517,81 @@ How are you doing today? Are you ready to build some winning accumulator bets? �
                 specificInstructions = 'Provide comprehensive betting analysis and recommendations.';
         }
 
-        const prompt = `You are an expert football betting analyst with access to live MySQL database data.
+        // Check if we have matches to determine response style
+        const hasMatches = uniqueMatches.length > 0;
+        
+        let prompt;
+        if (!hasMatches) {
+            // Short, direct response when no matches found
+            prompt = `You are an expert football betting analyst with access to live MySQL database data.
 
-DATABASE SCHEMA CONTEXT:
-- Rawdata_Total: Main table with match data (MATCH_ID, Home, Away, Date, Time, League, Score_Home, Score_Away, ELO_Home, ELO_Away, xG_Home, xG_Away, PH, PD, PA, HS_Target, AS_Target, STATUS)
-- PH = Home win odds, PD = Draw odds, PA = Away win odds
-- HS_Target = Home shots, AS_Target = Away shots
-- STATUS = Match status: 'FT' = Full Time (completed matches), other values = upcoming/live matches (NS, NULL, NA, LIVE, etc.)
-- Price_Data: Betting market prices (MATCH_ID, Market_Type, Price) for handicaps and totals
-- HomeMarketContext/AwayMarketContext: Analysis thresholds for betting evaluation
-- Date format: YYYY-MM-DD, Time: HH:MM:SS, ELO range: 1200-2000, xG range: 0.0-5.0
-- Upcoming matches have STATUS != 'FT', completed matches have STATUS = 'FT', odds in decimal format
+I've looked in the Rawdata_Total database table for: "${userQuery}"
+
+${contextData}
+
+IMPORTANT: Keep your response very short and direct. Simply state that there are no matches for the requested timeframe. Do not provide long explanations, suggestions, or additional analysis. Just give a brief, direct answer.`;
+        } else if (!isRealData) {
+            // Special handling for mock/demo data
+            prompt = `You are an expert football betting analyst. 
+
+Database Status: Unable to connect to live database - showing demo data only.
+
+${contextData}
+
+IMPORTANT: Inform the user that you found ${uniqueMatches.length} demo matches but cannot access the live database. Keep response short and mention that real match data is currently unavailable. Do not provide detailed analysis of demo data.`;
+        } else {
+            // Count matches by status for more informative response
+            const notStartedMatches = uniqueMatches.filter(m => !m.STATUS || m.STATUS === 'NS' || m.STATUS === null).length;
+            const liveMatches = uniqueMatches.filter(m => m.STATUS === 'LIVE').length;
+            
+            // Full analysis when real matches are found
+            prompt = `You are an expert football betting analyst with access to live MySQL database data.
+
+DATABASE SCHEMA CONTEXT (Rawdata_Total table):
+Core Match Data:
+- MATCH_ID: Unique match identifier
+- Home/Away: Team names
+- Date/Time: Match date and kickoff time
+- League: Competition name
+- STATUS: 'FT' = Full Time (completed), 'NS' = Not Started, 'LIVE' = In Progress
+
+Scores & Results:
+- HG/AG: Home/Away goals (final scores)
+- Score_Home/Score_Away: Predicted scores based on team performance metrics
+
+Betting Odds:
+- PH/PD/PA: Pinnacle odds for Home Win/Draw/Away Win
+- B365_H/B365_D/B365_A: Bet365 odds
+- Under2.5/Over2.5: Total goals market odds
+
+Performance Metrics:
+- ELO_Home/ELO_Away: Team ELO ratings (strength indicators, range ~1200-2000)
+- xG/xG_Away: Expected Goals (quality of scoring chances, range 0.0-5.0)
+- HS_Target/AS_Target: Average shots on target (last 10 matches)
+- Score_Home/Score_Away: Expected goals based on recent form
+
+Advanced Analytics:
+- ELO_prob: Win probability based on ELO ratings
+- p1_skell/px_skell/p2_skell: Skellam distribution probabilities (Home/Draw/Away)
+- Conversion rates, entropy measures, and form indicators
 
 CURRENT DATA:
 ${contextData}
+
+Match Status Summary: ${uniqueMatches.length} total matches (${notStartedMatches} not started${liveMatches > 0 ? `, ${liveMatches} live` : ''})
 
 User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-IMPORTANT: Start your response by mentioning that you're looking in the Rawdata_Total database table, then provide:
+IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. Then provide:
 1. Direct answer to the user's question
 2. Relevant statistical insights from the ELO ratings and xG data
 3. Betting recommendations if applicable
 4. Risk assessment for any suggested bets
 
 Be conversational and specific to their query. Use the exact match data provided above.`;
+        }
 
         // Call Claude API
         console.log('🤖 Calling Claude API...');
