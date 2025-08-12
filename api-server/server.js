@@ -256,7 +256,7 @@ function parseUserQuery(query) {
     const teamMatches = query.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
     const potentialTeams = teamMatches.filter(match => 
         match.length > 2 && 
-        !['Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The', 'August'].includes(match)
+        !['Show', 'Get', 'Find', 'Tell', 'Give', 'What', 'When', 'Where', 'How', 'Today', 'Tomorrow', 'Yesterday', 'Next', 'Last', 'This', 'The', 'August', 'July', 'September', 'January', 'February', 'March', 'April', 'May', 'June', 'October', 'November', 'December', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Matches', 'Games', 'Fixtures', 'Analysis', 'Odds', 'Betting', 'Premier', 'League', 'Champions', 'Europa', 'Cup', 'Championship'].includes(match)
     );
     
     // Determine date context - enhanced to detect specific dates
@@ -269,7 +269,7 @@ function parseUserQuery(query) {
         dateContext = 'tomorrow';
     } else if (lowerQuery.includes('yesterday')) {
         dateContext = 'yesterday';
-    } else if (lowerQuery.includes('august') || lowerQuery.includes('12th') || lowerQuery.includes('2025-08-12')) {
+    } else if (lowerQuery.includes('august 12') || lowerQuery.includes('august 12th') || lowerQuery.includes('12th august') || lowerQuery.includes('2025-08-12')) {
         dateContext = 'specific';
         specificDate = '2025-08-12';
     }
