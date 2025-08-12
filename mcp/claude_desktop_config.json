@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "csv-server": {
+      "command": "/Users/malte/.nvm/versions/node/v22.17.0/bin/node",
+      "args": ["/Users/malte/workspace/mcp/build/index.js"]
+    }
+  }
+}
