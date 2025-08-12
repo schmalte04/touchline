@@ -330,21 +330,23 @@ class ClaudeBettingBot {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i].trim();
             
-            // Check if this is a table row (contains |)
-            if (line.includes('|') && line.split('|').length > 2) {
+            // Check if this is a table row (contains | and has multiple cells)
+            if (line.includes('|') && line.split('|').filter(cell => cell.trim()).length >= 2) {
                 if (!inTable) {
                     inTable = true;
                     tableRows = [];
                 }
                 
                 // Skip separator lines (----)
-                if (!line.includes('---')) {
+                if (!line.includes('---') && line !== '|') {
                     tableRows.push(line);
                 }
             } else {
                 // End of table
                 if (inTable) {
-                    result.push(this.createHtmlTable(tableRows));
+                    if (tableRows.length > 0) {
+                        result.push(this.createHtmlTable(tableRows));
+                    }
                     inTable = false;
                     tableRows = [];
                 }
@@ -363,16 +365,16 @@ class ClaudeBettingBot {
     createHtmlTable(rows) {
         if (rows.length === 0) return '';
         
-        let html = '<table>\n';
+        let html = '<table class="matches-table">\n';
         
         // First row is header
         if (rows.length > 0) {
             const headerCells = rows[0].split('|').filter(cell => cell.trim() !== '');
-            html += '<tr>\n';
+            html += '<thead><tr>\n';
             headerCells.forEach(cell => {
                 html += `<th>${cell.trim()}</th>\n`;
             });
-            html += '</tr>\n';
+            html += '</tr></thead>\n<tbody>\n';
         }
         
         // Remaining rows are data
@@ -380,14 +382,20 @@ class ClaudeBettingBot {
             const dataCells = rows[i].split('|').filter(cell => cell.trim() !== '');
             if (dataCells.length > 0) {
                 html += '<tr>\n';
-                dataCells.forEach(cell => {
-                    html += `<td>${cell.trim()}</td>\n`;
+                dataCells.forEach((cell, index) => {
+                    // Add classes for different column types
+                    let cellClass = '';
+                    if (index === 0) cellClass = 'time-cell';
+                    else if (index === 1) cellClass = 'match-cell';
+                    else if (index >= 2) cellClass = 'odds-cell';
+                    
+                    html += `<td class="${cellClass}">${cell.trim()}</td>\n`;
                 });
                 html += '</tr>\n';
             }
         }
         
-        html += '</table>\n';
+        html += '</tbody></table>\n';
         return html;
     }
 

@@ -5,6 +5,9 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const Anthropic = require('@anthropic-ai/sdk');
 
+// Load environment variables from .env file (for local development)
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 // Global variable to store executed SQL queries for debugging
 global.lastExecutedQueries = [];
 
@@ -867,20 +870,23 @@ User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. Present the data in a clean, readable table format like this:
+IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. 
 
-**⚽ Upcoming Matches**
+ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
 
-| Time  | Match | Home | Draw | Away |
-|-------|-------|------|------|------|
+| Time | Match | Home | Draw | Away |
+|------|-------|------|------|------|
 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
+| 19:30 | Team C vs Team D | 1.8 | 3.2 | 4.1 |
 
-Then provide:
-1. Direct answer to the user's question  
-2. Brief analysis focusing on best value bets
-3. Simple risk assessment if applicable
+Rules:
+- Use proper markdown table syntax with | separators
+- No ASCII art tables with dashes and characters
+- Keep team names concise 
+- Show odds to 1 decimal place
+- Include all matches from the provided data
 
-Keep the response clean and table-focused. Avoid complex risk analysis sections.`;
+Then provide brief analysis and recommendations.`;
         }
 
         // Call Claude API

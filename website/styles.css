@@ -422,39 +422,76 @@ header p {
 }
 
 /* Table formatting for match data */
-.message-content table {
+.message-content table,
+.message-content .matches-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 12px 0;
+    margin: 16px 0;
     background: white;
-    border-radius: 8px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.message-content thead {
+    background: linear-gradient(135deg, #4F46E5, #3B82F6);
 }
 
 .message-content th {
-    background: linear-gradient(135deg, #4F46E5, #3B82F6);
+    background: transparent;
     color: white;
-    padding: 10px 8px;
+    padding: 12px 10px;
     text-align: left;
-    font-weight: bold;
-    font-size: 12px;
-    border-bottom: 2px solid #E5E7EB;
+    font-weight: 600;
+    font-size: 13px;
+    border: none;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
 }
 
 .message-content td {
-    padding: 8px;
-    border-bottom: 1px solid #F3F4F6;
-    font-size: 13px;
+    padding: 12px 10px;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 14px;
     vertical-align: middle;
+    border: none;
 }
 
-.message-content tr:nth-child(even) {
-    background-color: #F9FAFB;
+.message-content tbody tr:nth-child(even) {
+    background-color: #F8FAFC;
 }
 
-.message-content tr:hover {
-    background-color: #EFF6FF;
+.message-content tbody tr:hover {
+    background-color: #EFF6FF !important;
+    transform: translateY(-1px);
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+/* Specific cell styling */
+.time-cell {
+    font-weight: 700;
+    color: #4F46E5;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 13px;
+    width: 60px;
+}
+
+.match-cell {
+    font-weight: 600;
+    color: #1F2937;
+    min-width: 200px;
+}
+
+.odds-cell {
+    font-weight: 700;
+    color: #059669;
+    text-align: center;
+    font-size: 13px;
+    background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+    border-left: 2px solid #10B981;
+    min-width: 55px;
 }
 
 /* Style odds columns differently */
@@ -464,19 +501,26 @@ header p {
     font-weight: bold;
     color: #059669;
     text-align: center;
+    background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
+    border-left: 2px solid #10B981;
 }
 
 /* Match names should be more prominent */
 .message-content td:nth-child(2) {
     font-weight: 600;
-    color: #374151;
+    color: #1F2937;
 }
 
 /* Time column styling */
 .message-content td:nth-child(1) {
     font-weight: bold;
-    color: #6366F1;
-    font-family: monospace;
+    color: #4F46E5;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+/* Add visual separator between sections */
+.matches-table + * {
+    margin-top: 24px;
 }
 
 .recommendation {
