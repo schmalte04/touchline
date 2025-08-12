@@ -86,14 +86,14 @@ async function getUpcomingMatches(days = 7) {
         const query = `
             SELECT * FROM Rawdata_Total 
             WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
-            AND STATUS = 'NS'
+            AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Date, Time
             LIMIT 100
         `;
         
-        console.log(`📅 Querying upcoming matches (STATUS = NS) for next ${days} days...`);
+        console.log(`📅 Querying upcoming matches (STATUS != FT) for next ${days} days...`);
         const [rows] = await pool.execute(query, [days]);
-        console.log(`✅ Found ${rows.length} upcoming matches with STATUS = NS`);
+        console.log(`✅ Found ${rows.length} upcoming matches with STATUS != FT`);
         
         return rows;
     } catch (error) {
@@ -107,13 +107,13 @@ async function searchMatchesByTeam(teamName) {
     try {
         const query = `
             SELECT * FROM Rawdata_Total 
-            WHERE (Home LIKE ? OR Away LIKE ?) AND Date >= CURDATE() AND STATUS = 'NS'
+            WHERE (Home LIKE ? OR Away LIKE ?) AND Date >= CURDATE() AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Date, Time
             LIMIT 50
         `;
         
         const searchTerm = `%${teamName}%`;
-        console.log(`🔍 Searching matches for team: ${teamName} (STATUS = NS)`);
+        console.log(`🔍 Searching matches for team: ${teamName} (STATUS != FT)`);
         const [rows] = await pool.execute(query, [searchTerm, searchTerm]);
         console.log(`✅ Found ${rows.length} upcoming matches for team "${teamName}"`);
         
@@ -129,12 +129,12 @@ async function searchMatchesByTeamAndDate(teamName, date) {
     try {
         const query = `
             SELECT * FROM Rawdata_Total 
-            WHERE (Home LIKE ? OR Away LIKE ?) AND Date = ? AND STATUS = 'NS'
+            WHERE (Home LIKE ? OR Away LIKE ?) AND Date = ? AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Time
         `;
         
         const searchTerm = `%${teamName}%`;
-        console.log(`🔍 Searching upcoming matches for team: ${teamName} on date: ${date} (STATUS = NS)`);
+        console.log(`🔍 Searching upcoming matches for team: ${teamName} on date: ${date} (STATUS != FT)`);
         const [rows] = await pool.execute(query, [searchTerm, searchTerm, date]);
         console.log(`✅ Found ${rows.length} upcoming matches for team "${teamName}" on ${date}`);
         
@@ -150,11 +150,11 @@ async function getTodaysMatches() {
     try {
         const query = `
             SELECT * FROM Rawdata_Total 
-            WHERE Date = CURDATE() AND STATUS = 'NS'
+            WHERE Date = CURDATE() AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Time
         `;
         
-        console.log(`📅 Querying matches for today (STATUS = NS)...`);
+        console.log(`📅 Querying matches for today (STATUS != FT)...`);
         const [rows] = await pool.execute(query);
         console.log(`✅ Found ${rows.length} upcoming matches for today`);
         
@@ -177,7 +177,7 @@ async function getTomorrowsMatches() {
         const availableDatesQuery = `
             SELECT DISTINCT Date, COUNT(*) as match_count 
             FROM Rawdata_Total 
-            WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) AND STATUS = 'NS'
+            WHERE Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY) AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Date 
         `;
         const [availableRows] = await pool.execute(availableDatesQuery);
@@ -187,18 +187,18 @@ async function getTomorrowsMatches() {
         const specificDateQuery = `
             SELECT COUNT(*) as count 
             FROM Rawdata_Total 
-            WHERE Date = '2025-08-12' AND STATUS = 'NS'
+            WHERE Date = '2025-08-12' AND (STATUS != 'FT' OR STATUS IS NULL)
         `;
         const [specificRows] = await pool.execute(specificDateQuery);
         console.log(`📅 Upcoming matches on 2025-08-12: ${specificRows[0].count}`);
         
         const query = `
             SELECT * FROM Rawdata_Total 
-            WHERE Date = DATE_ADD(CURDATE(), INTERVAL 1 DAY) AND STATUS = 'NS'
+            WHERE Date = DATE_ADD(CURDATE(), INTERVAL 1 DAY) AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Time
         `;
         
-        console.log(`📅 Querying matches for tomorrow (STATUS = NS)...`);
+        console.log(`📅 Querying matches for tomorrow (STATUS != FT)...`);
         console.log(`📅 SQL Query: ${query}`);
         const [rows] = await pool.execute(query);
         console.log(`✅ Found ${rows.length} upcoming matches for tomorrow`);
@@ -213,7 +213,7 @@ async function getTomorrowsMatches() {
             console.log(`🔍 No matches found with CURDATE() + 1, trying hardcoded 2025-08-12...`);
             const hardcodedQuery = `
                 SELECT * FROM Rawdata_Total 
-                WHERE Date = '2025-08-12' AND STATUS = 'NS'
+                WHERE Date = '2025-08-12' AND (STATUS != 'FT' OR STATUS IS NULL)
                 ORDER BY Time
             `;
             const [hardcodedRows] = await pool.execute(hardcodedQuery);
@@ -233,11 +233,11 @@ async function getMatchesForDate(date) {
     try {
         const query = `
             SELECT * FROM Rawdata_Total 
-            WHERE Date = ? AND STATUS = 'NS'
+            WHERE Date = ? AND (STATUS != 'FT' OR STATUS IS NULL)
             ORDER BY Time
         `;
         
-        console.log(`📅 Querying upcoming matches for date: ${date} (STATUS = NS)...`);
+        console.log(`📅 Querying upcoming matches for date: ${date} (STATUS != FT)...`);
         const [rows] = await pool.execute(query, [date]);
         console.log(`✅ Found ${rows.length} upcoming matches for ${date}`);
         
@@ -474,11 +474,11 @@ DATABASE SCHEMA CONTEXT:
 - Rawdata_Total: Main table with match data (MATCH_ID, Home, Away, Date, Time, League, Score_Home, Score_Away, ELO_Home, ELO_Away, xG_Home, xG_Away, PH, PD, PA, HS_Target, AS_Target, STATUS)
 - PH = Home win odds, PD = Draw odds, PA = Away win odds
 - HS_Target = Home shots, AS_Target = Away shots
-- STATUS = Match status: 'NS' = Not Started (future matches), 'FT' = Full Time (completed matches)
+- STATUS = Match status: 'FT' = Full Time (completed matches), other values = upcoming/live matches (NS, NULL, NA, LIVE, etc.)
 - Price_Data: Betting market prices (MATCH_ID, Market_Type, Price) for handicaps and totals
 - HomeMarketContext/AwayMarketContext: Analysis thresholds for betting evaluation
 - Date format: YYYY-MM-DD, Time: HH:MM:SS, ELO range: 1200-2000, xG range: 0.0-5.0
-- Future matches have STATUS = 'NS', completed matches have STATUS = 'FT', odds in decimal format
+- Upcoming matches have STATUS != 'FT', completed matches have STATUS = 'FT', odds in decimal format
 
 CURRENT DATA:
 ${contextData}
