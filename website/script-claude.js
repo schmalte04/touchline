@@ -105,6 +105,11 @@ class ClaudeBettingBot {
     async sendInitialMessage() {
         console.log('📤 Sending initial greeting...');
         
+        // Clear the loading message first
+        if (this.chatMessages) {
+            this.chatMessages.innerHTML = '';
+        }
+        
         const apiUrl = this.baseUrl + '/api/chat';
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -428,5 +433,39 @@ window.testMessage = function(message = "Hello test") {
     }
 };
 
+// Quick Action functions for the buttons
+window.quickAction = function(action) {
+    console.log('⚡ Quick action triggered:', action);
+    
+    if (!window.claudeBot) {
+        console.error('❌ Claude bot not available');
+        return;
+    }
+    
+    let message = '';
+    
+    switch (action) {
+        case 'upcoming_matches':
+            message = 'Show me upcoming matches for today and tomorrow';
+            break;
+        case 'high_confidence':
+            message = 'Show me high confidence betting opportunities';
+            break;
+        case 'build_accumulator':
+            message = 'Help me build an accumulator with 3-4 matches';
+            break;
+        case 'analyze_match':
+            message = 'What matches can you analyze for me?';
+            break;
+        default:
+            message = 'Help me with betting analysis';
+    }
+    
+    // Set the message in the input and send it
+    window.claudeBot.chatInput.value = message;
+    window.claudeBot.sendMessage();
+};
+
 console.log('✅ CLAUDE AI SCRIPT LOADED SUCCESSFULLY');
 console.log('💡 You can test messaging by typing: testMessage("your message here") in the console');
+console.log('⚡ Quick actions are now available via quickAction("action_name")');

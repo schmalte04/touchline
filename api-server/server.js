@@ -247,26 +247,6 @@ async function getMatchesForDate(date) {
     }
 }
 
-// Helper function to get matches for a specific date
-async function getMatchesForDate(date) {
-    try {
-        const query = `
-            SELECT * FROM Rawdata_Total 
-            WHERE Date = ?
-            ORDER BY Time
-        `;
-        
-        console.log(`📅 Querying matches for date: ${date}...`);
-        const [rows] = await pool.execute(query, [date]);
-        console.log(`✅ Found ${rows.length} matches for ${date}`);
-        
-        return rows;
-    } catch (error) {
-        console.error(`❌ Error querying matches for ${date}:`, error);
-        return [];
-    }
-}
-
 // Helper function to parse query and determine what the user wants
 function parseUserQuery(query) {
     const lowerQuery = query.toLowerCase();
