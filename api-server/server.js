@@ -105,7 +105,7 @@ async function getUpcomingMatches(days = 7) {
             AND Date <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
             AND (STATUS != 'FT' OR STATUS IS NULL OR STATUS = 'NS' OR STATUS = 'LIVE')
             ORDER BY Date ASC, Time ASC
-            LIMIT 100
+            LIMIT 500
         `;
         
         console.log(`📅 Querying upcoming matches with precise STATUS filtering for next ${days} days...`);
@@ -145,7 +145,7 @@ async function searchMatchesFlexible(searchParams) {
             date = null, 
             status = null,
             operator = 'contains',  // contains, equals, starts_with, ends_with
-            limit = 50,
+            limit = 500,
             includeFinished = false
         } = searchParams;
 
