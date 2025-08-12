@@ -5,6 +5,7 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const Anthropic = require('@anthropic-ai/sdk');
 
+
 // Load environment variables from .env file (for local development)
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
