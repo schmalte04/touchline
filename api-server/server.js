@@ -488,7 +488,8 @@ function parseUserQueryEnhanced(query) {
         'August', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
         'What', 'When', 'Where', 'Who', 'How', 'Show', 'Find', 'Get', 'Tell', 'Give',
         'Analysis', 'Odds', 'Betting', 'Match', 'Game', 'Fixture', 'Score', 'Result',
-        'Help', 'Please', 'Can', 'Could', 'Would', 'Should', 'Need', 'Want', 'Create', 'Make', 'Build'
+        'Help', 'Please', 'Can', 'Could', 'Would', 'Should', 'Need', 'Want', 'Create', 'Make', 'Build',
+        'Analyse', 'Next', 'This', 'The', 'That', 'These', 'Those', 'First', 'Last', 'Second'
     ];
 
     let allMatches = [];
@@ -501,7 +502,7 @@ function parseUserQueryEnhanced(query) {
     const queryTypes = {
         score: /\b(score|result|final|goals?)\b/i,
         odds: /\b(odds?|betting|bet|price|value)\b/i,
-        analysis: /\b(analysis|analyze|predict|statistics|stats)\b/i,
+        analysis: /\b(analysis|analyze|analyse|predict|statistics|stats)\b/i,
         accumulator: /\b(acca|accumulator|combo|parlay|multiple)\b/i,
         head2head: /\b(head to head|h2h|versus|vs|against)\b/i,
         live: /\b(live|now|current)\b/i,
@@ -516,13 +517,26 @@ function parseUserQueryEnhanced(query) {
 
     // Skip team detection for accumulator queries - they should get all upcoming matches
     if (result.queryType !== 'accumulator') {
-        result.teams = [...new Set(allMatches)]
+        // First pass: Get all potential matches
+        let potentialTeams = [...new Set(allMatches)]
             .filter(match => 
                 match.length > 2 && 
                 !EXCLUDED_WORDS.includes(match) &&
                 !match.match(/^\d+$/) // exclude pure numbers
-            )
-            .slice(0, 3); // limit to 3 teams max
+            );
+        
+        // Second pass: Clean up team names by removing excluded words from multi-word matches
+        result.teams = potentialTeams.map(team => {
+            // Split multi-word team names and filter out excluded words
+            const words = team.split(/\s+/);
+            const cleanWords = words.filter(word => !EXCLUDED_WORDS.includes(word));
+            return cleanWords.join(' ');
+        })
+        .filter(team => team.length > 0) // Remove empty results
+        .slice(0, 3); // limit to 3 teams max
+        
+        console.log(`🏷️ Original team matches: ${potentialTeams.join(', ')}`);
+        console.log(`🏷️ Cleaned team names: ${result.teams.join(', ')}`);
     } else {
         result.teams = []; // No team filtering for accumulator queries
     }
