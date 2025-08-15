@@ -261,8 +261,8 @@ class ClaudeBettingBot {
             const line = lines[i].trim();
             
             if (line === '') {
-                // End current section on empty line
-                if (currentSection) {
+                // End current section on empty line, but don't add excessive spacing
+                if (currentSection.trim()) {
                     result += this.processSection(currentSection);
                     currentSection = '';
                 }
@@ -313,7 +313,7 @@ class ClaudeBettingBot {
         }
         
         // Process any remaining section
-        if (currentSection) {
+        if (currentSection.trim()) {
             result += this.processSection(currentSection);
         }
         
@@ -403,7 +403,7 @@ class ClaudeBettingBot {
     processSection(content) {
         if (!content.trim()) return '';
         
-        let formatted = content;
+        let formatted = content.trim();
         
         // Apply all formatting
         formatted = this.applyInlineFormatting(formatted);
@@ -424,8 +424,12 @@ class ClaudeBettingBot {
             return `<div class="confidence-section">${formatted}</div>`;
         }
         
-        // Regular paragraph
-        return `<div class="message-paragraph">${formatted.replace(/\n/g, '<br>')}</div>`;
+        // Only create paragraph if there's actual content
+        if (formatted.trim().length > 0) {
+            return `<div class="message-paragraph">${formatted.replace(/\n/g, '<br>')}</div>`;
+        }
+        
+        return '';
     }
 
     formatRecommendation(line) {

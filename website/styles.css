@@ -204,6 +204,11 @@ header p {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
+/* Remove top margin from first child to avoid extra whitespace */
+.message-content > *:first-child {
+    margin-top: 0;
+}
+
 .user-message .message-content {
     background: #e3f2fd;
 }
@@ -506,7 +511,7 @@ header p {
 .message-content .matches-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 16px 0;
+    margin: 8px 0;
     background: white;
     border-radius: 10px;
     overflow: hidden;
@@ -614,7 +619,7 @@ header p {
 
 /* Add visual separator between sections */
 .matches-table + * {
-    margin-top: 24px;
+    margin-top: 12px;
 }
 
 .recommendation {
@@ -662,7 +667,7 @@ header p {
 }
 
 .message-paragraph {
-    margin: 12px 0;
+    margin: 6px 0;
     line-height: 1.6;
     font-size: 14px;
 }
