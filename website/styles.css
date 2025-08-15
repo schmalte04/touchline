@@ -206,18 +206,24 @@ header p {
 
 /* Remove top margin from first child to avoid extra whitespace */
 .message-content > *:first-child {
-    margin-top: 0;
+    margin-top: 0 !important;
 }
 
 /* Remove bottom margin from last child to avoid extra whitespace */
 .message-content > *:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
 }
 
 /* Ensure tables as first elements have no margin */
 .message-content > table:first-child,
 .message-content > .matches-table:first-child {
-    margin-top: 0;
+    margin-top: 0 !important;
+}
+
+/* Force remove all margins from message content children */
+.message-content > * {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
 }
 
 .user-message .message-content {
@@ -522,7 +528,7 @@ header p {
 .message-content .matches-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 0;
+    margin: 0 !important;
     background: white;
     border-radius: 10px;
     overflow: hidden;
@@ -633,6 +639,19 @@ header p {
     margin-top: 8px;
 }
 
+/* Force remove all spacing for compact layout */
+.chat-messages .message-content > * {
+    margin: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Specific override for paragraph elements */
+.chat-messages .message-content div.message-paragraph {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 .recommendation {
     background: linear-gradient(135deg, #F0FDF4, #DCFCE7);
     border: 1px solid #BBF7D0;
@@ -678,9 +697,14 @@ header p {
 }
 
 .message-paragraph {
-    margin: 0;
+    margin: 0 !important;
     line-height: 1.6;
     font-size: 14px;
+}
+
+/* More specific selector to ensure no margins */
+.message-content .message-paragraph {
+    margin: 0 !important;
 }
 
 .combined-odds {
