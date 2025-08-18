@@ -1,6 +1,6 @@
 # Touchline - AI-Powered Football Betting Assistant
 
-A professional Claude AI-powered betting assistant that provides intelligent football match analysis, ELO ratings, xG predictions, and betting recommendations.
+A professional Claude AI-powered betting assistant that provides intelligent football match analysis, ELO ratings, xG predictions, and betting recommendations. Available as both a web application and Telegram bot.
 
 ![Touchline Logo](https://img.shields.io/badge/Touchline-AI%20Betting%20Assistant-blue)
 
@@ -9,8 +9,22 @@ A professional Claude AI-powered betting assistant that provides intelligent foo
 - **Real-time Match Analysis** - Live data integration with comprehensive statistics
 - **Claude AI Integration** - Powered by Anthropic's Claude for intelligent betting insights
 - **ELO & xG Analytics** - Advanced metrics for informed decision making
-- **Professional UI** - Clean, responsive design optimized for betting analysis
+- **Professional Web UI** - Clean, responsive design optimized for betting analysis
+- **Telegram Bot** - Convenient chat interface for mobile betting insights
 - **Risk Assessment** - Confidence levels and risk evaluation for each recommendation
+
+## 🤖 Access Methods
+
+### 💻 Web Application
+Professional web interface with advanced visualizations and detailed analysis
+
+### 📱 Telegram Bot
+Instant betting insights through Telegram chat:
+- `/start` - Get started with the bot
+- `/upcoming` - Show upcoming matches
+- `/accumulator` - Build smart accumulators
+- `/confidence` - High confidence picks
+- Natural language: "Help me build an accumulator for this weekend"
 
 ## 🎯 Live Demo
 
@@ -21,6 +35,7 @@ A professional Claude AI-powered betting assistant that provides intelligent foo
 - **Frontend**: HTML5, CSS3, Vanilla JavaScript
 - **Backend**: Node.js, Express.js
 - **AI**: Anthropic Claude API
+- **Telegram Bot**: Node Telegram Bot API
 - **Hosting**: DigitalOcean App Platform
 - **Data**: MCP (Model Context Protocol) integration
 
@@ -38,15 +53,49 @@ A professional Claude AI-powered betting assistant that provides intelligent foo
 - Confidence scoring
 - Market inefficiency detection
 
-### Professional Features
-- Real-time data updates
-- Mobile-responsive design
-- Secure API integration
-- Production-ready deployment
+### Multi-Platform Access
+- Professional web interface
+- Telegram bot for mobile convenience
+- Same AI intelligence across all platforms
 
 ## 🚀 Quick Start
 
+### Web Application
 This application is designed for DigitalOcean App Platform deployment with zero configuration required.
+
+### Telegram Bot Setup
+
+1. **Create a Telegram Bot:**
+   - Message [@BotFather](https://t.me/botfather) on Telegram
+   - Send `/newbot` command and follow instructions
+   - Copy your bot token
+
+2. **Configure Environment:**
+   ```bash
+   # Add to your .env file
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   ```
+
+3. **Install and Run:**
+   ```bash
+   # Install all dependencies (web + bot)
+   npm run install-all
+   
+   # Start the web server
+   npm start
+   
+   # Start the Telegram bot (in another terminal)
+   npm run bot
+   ```
+
+### Available Scripts
+```bash
+npm start          # Start web server
+npm run dev        # Start web server in dev mode
+npm run bot        # Start Telegram bot
+npm run bot:dev    # Start Telegram bot in dev mode
+npm run install-all # Install all dependencies
+```
 
 ### Automatic Deployment Features
 - **SSL/HTTPS** - Automatic certificate management
@@ -58,17 +107,35 @@ This application is designed for DigitalOcean App Platform deployment with zero 
 ## File Structure
 
 ```
-digitalocean-app-deploy/
+touchline/
 ├── .do/
 │   └── app.yaml              # App Platform configuration
 ├── api-server/
 │   ├── package.json          # Node.js dependencies
 │   └── server.js             # API server
+├── telegram-bot/
+│   ├── package.json          # Bot dependencies
+│   ├── bot.js               # Main bot (polling mode)
+│   ├── webhook.js           # Webhook mode for production
+│   ├── start.sh             # Easy startup script
+│   ├── ecosystem.config.json # PM2 configuration
+│   └── README.md            # Bot setup guide
 └── website/
-    ├── index.html            # Frontend
-    ├── styles.css            # Styling
-    └── script-claude.js      # JavaScript
+    ├── index.html           # Frontend
+    ├── styles.css           # Styling
+    └── script-claude.js     # JavaScript
 ```
+
+## Deployment Options
+
+### Option 1: Web Application Only
+Deploy just the web interface to DigitalOcean App Platform
+
+### Option 2: Full Setup (Web + Telegram Bot)
+Deploy both web interface and Telegram bot for complete betting assistant
+
+### Option 3: Telegram Bot Only
+Run just the Telegram bot on any server for chat-based betting insights
 
 ## What This Setup Provides
 

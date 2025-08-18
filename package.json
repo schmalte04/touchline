@@ -4,8 +4,15 @@
   "description": "Touchline - AI-Powered Football Betting Assistant with Claude AI integration",
   "main": "api-server/server.js",
   "scripts": {
-    "start": "node api-server/server.js",
-    "dev": "nodemon api-server/server.js"
+    "start": "./start.sh",
+    "start:api": "node api-server/server.js",
+    "start:bot": "cd telegram-bot && node bot.js",
+    "start:combined": "npm run start:api & npm run start:bot",
+    "dev": "nodemon api-server/server.js",
+    "bot": "cd telegram-bot && npm start",
+    "bot:dev": "cd telegram-bot && npm run dev",
+    "bot:install": "cd telegram-bot && npm install",
+    "install-all": "npm install && npm run bot:install"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.3",
@@ -14,7 +21,10 @@
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
     "mysql2": "^3.14.3",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "axios": "^1.6.2",
+    "moment": "^2.29.4"
   },
   "engines": {
     "node": "18.x"
@@ -24,7 +34,9 @@
     "betting",
     "ai",
     "football",
-    "touchline"
+    "touchline",
+    "telegram",
+    "bot"
   ],
   "author": "Touchline Development",
   "license": "MIT"

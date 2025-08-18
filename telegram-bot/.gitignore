@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Logs
+logs/
+*.log
+
+# Environment variables
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# PM2 files
+pids/
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# Runtime data
+*.tgz
+*.tar.gz
+.npm
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
