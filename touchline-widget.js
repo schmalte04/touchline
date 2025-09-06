@@ -175,7 +175,7 @@
         
         .widget-chat {
             width: 480px;
-            height: 600px;
+            height: 700px;
             background: white;
             border-radius: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.15);
@@ -665,22 +665,9 @@
                 console.log('🚀 Processing bot message for tables...');
                 console.log('🔍 Original text:', text);
                 
-                processedText = formatMarkdownTables(text);
-                console.log('📝 After formatMarkdownTables:', processedText);
-                
-                // Force check if we have any pipe characters that should be tables
-                if (text.includes('|') && processedText === text) {
-                    console.log('⚠️ Text contains pipes but no conversion happened, forcing simple conversion...');
-                    processedText = forceTableConversion(text);
-                    console.log('🔧 After forceTableConversion:', processedText);
-                }
-                
-                // Additional fallback - check if we still have pipes
-                if (processedText.includes('|') && !processedText.includes('<table>')) {
-                    console.log('🚨 Still has pipes but no table HTML, applying emergency conversion...');
-                    processedText = emergencyTableConversion(processedText);
-                    console.log('🆘 After emergency conversion:', processedText);
-                }
+                // Only process if it looks like actual tabular data
+                processedText = smartTableDetection(text);
+                console.log('� After smart table detection:', processedText);
             }
             
             // Create message element
@@ -708,279 +695,172 @@
             scrollToBottom();
         }
         
-        // Emergency table conversion - most aggressive approach
-        function emergencyTableConversion(text) {
-            console.log('🆘 Emergency table conversion started');
-            
-            // Split into lines and find any line with multiple pipes
-            const lines = text.split('\n');
-            const processedLines = [];
-            
-            let currentTableLines = [];
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                // Check if line has multiple pipes (potential table)
-                if (line.includes('|') && line.split('|').length >= 3) {
-                    currentTableLines.push(line);
-                } else {
-                    // Process any accumulated table lines
-                    if (currentTableLines.length > 0) {
-                        const tableHtml = bruteForcePipeToTable(currentTableLines);
-                        processedLines.push(tableHtml);
-                        currentTableLines = [];
-                    }
-                    
-                    // Add non-table line
-                    if (line.length > 0) {
-                        processedLines.push(line);
-                    }
-                }
-            }
-            
-            // Handle any remaining table lines
-            if (currentTableLines.length > 0) {
-                const tableHtml = bruteForcePipeToTable(currentTableLines);
-                processedLines.push(tableHtml);
-            }
-            
-            return processedLines.join('<br>');
-        }
-        
-        // Brute force pipe to table conversion
-        function bruteForcePipeToTable(lines) {
-            console.log('💥 Brute force conversion:', lines);
-            
-            if (lines.length === 0) return '';
-            
-            // Remove separator lines and clean data
-            const cleanLines = lines.filter(line => {
-                const cleaned = line.replace(/[\s\-]/g, '');
-                return cleaned !== '' && !cleaned.match(/^[\|]+$/);
-            });
-            
-            if (cleanLines.length < 1) return lines.join('<br>');
-            
-            // Parse each line
-            const tableRows = cleanLines.map(line => {
-                // Clean the line and split by pipes
-                let clean = line.trim();
-                if (clean.startsWith('|')) clean = clean.substring(1);
-                if (clean.endsWith('|')) clean = clean.substring(0, clean.length - 1);
-                
-                return clean.split('|').map(cell => cell.trim());
-            });
-            
-            console.log('🔨 Parsed table rows:', tableRows);
-            
-            // Build HTML table
-            let html = '<table style="width:100%; border-collapse: collapse; margin: 8px 0;">';
-            
-            // First row as header
-            if (tableRows.length > 0) {
-                html += '<thead><tr>';
-                tableRows[0].forEach(cell => {
-                    html += `<th style="padding: 6px 8px; border: 1px solid #ddd; background: #f5f5f5;">${cell || ''}</th>`;
-                });
-                html += '</tr></thead>';
-            }
-            
-            // Data rows
-            if (tableRows.length > 1) {
-                html += '<tbody>';
-                for (let i = 1; i < tableRows.length; i++) {
-                    html += '<tr>';
-                    tableRows[i].forEach(cell => {
-                        html += `<td style="padding: 6px 8px; border: 1px solid #ddd;">${cell || ''}</td>`;
-                    });
-                    html += '</tr>';
-                }
-                html += '</tbody>';
-            }
-            
-            html += '</table>';
-            
-            console.log('💪 Brute force result:', html);
-            return html;
-        }
-        
-        // Force table conversion for any text with pipes
-        function forceTableConversion(text) {
-            console.log('🔧 Force converting pipes to table...');
+        // Smart table detection - only convert actual tabular data
+        function smartTableDetection(text) {
+            console.log('🧠 Smart table detection started');
             
             const lines = text.split('\n');
-            let result = [];
-            let tableLines = [];
-            
-            for (const line of lines) {
-                if (line.includes('|') && line.split('|').length > 2) {
-                    tableLines.push(line.trim());
-                } else {
-                    // Non-table line
-                    if (tableLines.length > 0) {
-                        // Convert accumulated table lines
-                        const tableHtml = simpleTableConvert(tableLines);
-                        result.push(tableHtml);
-                        tableLines = [];
-                    }
-                    result.push(line);
-                }
-            }
-            
-            // Handle remaining table lines
-            if (tableLines.length > 0) {
-                const tableHtml = simpleTableConvert(tableLines);
-                result.push(tableHtml);
-            }
-            
-            return result.join('\n');
-        }
-        
-        // Simple table conversion
-        function simpleTableConvert(lines) {
-            if (lines.length < 2) return lines.join('\n');
-            
-            console.log('🔨 Simple table convert:', lines);
-            
-            // Filter out separator lines
-            const dataLines = lines.filter(line => !line.match(/^[\|\s\-]+$/));
-            
-            if (dataLines.length < 2) return lines.join('\n');
-            
-            const rows = dataLines.map(line => {
-                return line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
-            });
-            
-            let html = '<table><thead><tr>';
-            rows[0].forEach(header => {
-                html += `<th>${header}</th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            for (let i = 1; i < rows.length; i++) {
-                html += '<tr>';
-                rows[i].forEach(cell => {
-                    html += `<td>${cell}</td>`;
-                });
-                html += '</tr>';
-            }
-            
-            html += '</tbody></table>';
-            console.log('🎉 Simple table result:', html);
-            return html;
-        }
-        
-        // Convert markdown-style tables to HTML tables
-        function formatMarkdownTables(text) {
-            console.log('🔍 Table parsing input:', text);
-            
-            // More aggressive approach - look for any lines with multiple pipes
-            const lines = text.split('\n');
-            let result = [];
+            const result = [];
             let i = 0;
             
             while (i < lines.length) {
                 const line = lines[i].trim();
                 
-                // Check if this line has multiple pipes (potential table row)
-                const pipeCount = (line.match(/\|/g) || []).length;
-                
-                if (pipeCount >= 2 && line.includes('|')) {
-                    console.log('🎯 Found potential table line:', line);
+                // Check if this looks like a table header (multiple pipes, header-like content)
+                if (isTableHeader(line)) {
+                    console.log('🎯 Found potential table header:', line);
                     
-                    // Look ahead to find consecutive table lines
-                    const tableLines = [];
-                    let j = i;
+                    // Look for consecutive table rows
+                    const tableLines = [line];
+                    let j = i + 1;
                     
-                    while (j < lines.length) {
-                        const currentLine = lines[j].trim();
-                        const currentPipes = (currentLine.match(/\|/g) || []).length;
-                        
-                        if (currentPipes >= 2 && currentLine.includes('|')) {
-                            // Skip separator lines (lines with mostly dashes)
-                            if (!currentLine.match(/^[\|\s\-]+$/)) {
-                                tableLines.push(currentLine);
-                            }
-                            j++;
-                        } else {
-                            break;
-                        }
+                    // Skip separator line if it exists
+                    if (j < lines.length && isSeparatorLine(lines[j])) {
+                        j++;
                     }
                     
-                    console.log('📊 Table lines found:', tableLines);
+                    // Collect data rows
+                    while (j < lines.length && isTableDataRow(lines[j], tableLines[0])) {
+                        tableLines.push(lines[j].trim());
+                        j++;
+                    }
                     
+                    console.log('📊 Table lines collected:', tableLines);
+                    
+                    // Only convert if we have header + at least one data row
                     if (tableLines.length >= 2) {
-                        // Convert to HTML table
-                        const tableHtml = createHtmlTable(tableLines);
+                        const tableHtml = createProfessionalTable(tableLines);
                         result.push(tableHtml);
                         i = j; // Skip processed lines
                         continue;
                     }
                 }
                 
-                // Not a table line, add as regular text
-                if (line.length > 0) {
-                    result.push(line);
-                }
+                // Regular line - just add it with line breaks preserved
+                result.push(line);
                 i++;
             }
             
-            const finalResult = result.join('\n\n');
-            console.log('✅ Final processed text:', finalResult);
-            return finalResult;
+            return result.join('<br>');
         }
         
-        // Create HTML table from pipe-separated lines
-        function createHtmlTable(tableLines) {
-            if (tableLines.length === 0) return '';
+        // Check if line looks like a table header
+        function isTableHeader(line) {
+            if (!line.includes('|')) return false;
             
-            console.log('🏗️ Creating table from lines:', tableLines);
+            // Must have at least 3 pipes (for at least 2 columns)
+            const pipeCount = (line.match(/\|/g) || []).length;
+            if (pipeCount < 3) return false;
             
-            // Clean and parse all lines
-            const rows = tableLines.map(line => {
-                // Remove leading/trailing pipes and split
+            // Check for header-like keywords
+            const headerKeywords = ['date', 'time', 'match', 'home', 'away', 'draw', 'odds', 'team', 'league', 'score'];
+            const lowerLine = line.toLowerCase();
+            
+            // Must contain at least one header keyword
+            return headerKeywords.some(keyword => lowerLine.includes(keyword));
+        }
+        
+        // Check if line is a separator (dashes and pipes)
+        function isSeparatorLine(line) {
+            if (!line || !line.includes('|')) return false;
+            const cleaned = line.replace(/[\|\s\-]/g, '');
+            return cleaned === '';
+        }
+        
+        // Check if line is a valid data row for the table
+        function isTableDataRow(line, headerLine) {
+            if (!line || !line.includes('|')) return false;
+            
+            const headerPipes = (headerLine.match(/\|/g) || []).length;
+            const linePipes = (line.match(/\|/g) || []).length;
+            
+            // Should have similar number of pipes as header (±1 tolerance)
+            return Math.abs(headerPipes - linePipes) <= 1;
+        }
+        
+        // Create professional HTML table
+        function createProfessionalTable(tableLines) {
+            console.log('🏗️ Creating professional table from:', tableLines);
+            
+            // Parse header
+            const headerLine = tableLines[0];
+            let cleanHeader = headerLine.trim();
+            if (cleanHeader.startsWith('|')) cleanHeader = cleanHeader.substring(1);
+            if (cleanHeader.endsWith('|')) cleanHeader = cleanHeader.substring(0, cleanHeader.length - 1);
+            const headers = cleanHeader.split('|').map(h => h.trim());
+            
+            // Parse data rows (skip header)
+            const dataRows = tableLines.slice(1).map(line => {
                 let cleanLine = line.trim();
                 if (cleanLine.startsWith('|')) cleanLine = cleanLine.substring(1);
                 if (cleanLine.endsWith('|')) cleanLine = cleanLine.substring(0, cleanLine.length - 1);
-                
                 return cleanLine.split('|').map(cell => cell.trim());
-            }).filter(row => row.length > 1); // Only keep rows with multiple cells
-            
-            if (rows.length === 0) return tableLines.join('\n');
-            
-            console.log('📋 Parsed rows:', rows);
-            
-            // First row is header
-            const headers = rows[0];
-            const dataRows = rows.slice(1);
-            
-            let html = '<table>';
-            
-            // Add header
-            html += '<thead><tr>';
-            headers.forEach(header => {
-                html += `<th>${header || ''}</th>`;
             });
-            html += '</tr></thead>';
             
-            // Add data rows
-            if (dataRows.length > 0) {
-                html += '<tbody>';
-                dataRows.forEach(row => {
-                    html += '<tr>';
-                    for (let i = 0; i < headers.length; i++) {
-                        const cell = row[i] || '';
-                        html += `<td>${cell}</td>`;
-                    }
-                    html += '</tr>';
+            console.log('� Headers:', headers);
+            console.log('📊 Data rows:', dataRows);
+            
+            // Build HTML with professional styling
+            let html = `
+                <table style="
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin: 12px 0; 
+                    font-size: 11px; 
+                    background: white; 
+                    border-radius: 8px; 
+                    overflow: hidden; 
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                ">
+                    <thead>
+                        <tr style="background: linear-gradient(135deg, #f8f9fa, #e9ecef);">
+            `;
+            
+            headers.forEach(header => {
+                html += `
+                    <th style="
+                        padding: 8px 10px; 
+                        text-align: left; 
+                        font-weight: 600; 
+                        color: #495057; 
+                        font-size: 10px; 
+                        text-transform: uppercase; 
+                        letter-spacing: 0.5px;
+                        border-bottom: 2px solid #dee2e6;
+                    ">${header}</th>
+                `;
+            });
+            
+            html += `
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            dataRows.forEach((row, index) => {
+                const bgColor = index % 2 === 0 ? '#ffffff' : '#f8f9fa';
+                html += `<tr style="background: ${bgColor}; transition: background-color 0.2s;" onmouseover="this.style.background='#e3f2fd'" onmouseout="this.style.background='${bgColor}'">`;
+                
+                row.forEach(cell => {
+                    html += `
+                        <td style="
+                            padding: 8px 10px; 
+                            border-bottom: 1px solid #e9ecef; 
+                            color: #495057;
+                            font-size: 11px;
+                        ">${cell || '-'}</td>
+                    `;
                 });
-                html += '</tbody>';
-            }
+                
+                html += '</tr>';
+            });
             
-            html += '</table>';
+            html += `
+                    </tbody>
+                </table>
+            `;
             
-            console.log('🎨 Generated table HTML:', html);
+            console.log('✨ Professional table created');
             return html;
         }
         
