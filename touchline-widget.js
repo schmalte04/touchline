@@ -28,7 +28,7 @@
                     <div class="widget-header-content">
                         <div class="widget-title">
                             <span class="widget-logo">⚽</span>
-                            <span>Touchline AI Assistant</span>
+                            <span>Turboscores AI Assistant</span>
                         </div>
                         <div class="widget-subtitle">Ask me about betting insights</div>
                     </div>
@@ -81,7 +81,7 @@
                 </div>
                 
                 <div class="widget-footer">
-                    <span>Powered by <strong>Touchline AI</strong></span>
+                    <span>Powered by <strong>GainR.ai</strong></span>
                 </div>
             </div>
         </div>
@@ -660,7 +660,13 @@
         // Add message to chat
         function addMessage(text, type = 'bot') {
             // Process text to convert markdown tables to HTML
-            const processedText = type === 'bot' ? formatMarkdownTables(text) : text;
+            let processedText = text;
+            if (type === 'bot') {
+                processedText = formatMarkdownTables(text);
+                // Debug log
+                console.log('Original text:', text);
+                console.log('Processed text:', processedText);
+            }
             
             const messageHTML = `
                 <div class="widget-message ${type}-message">
@@ -677,129 +683,103 @@
         
         // Convert markdown-style tables to HTML tables
         function formatMarkdownTables(text) {
-            // First try to handle proper markdown tables
-            const tablePattern = /(\|[^|\n]+)+\|[\s]*\n(\|[\s]*:?-+:?[\s]*)+\|[\s]*\n((\|[^|\n]*)+\|[\s]*\n?)*/g;
+            console.log('Table parsing input:', text);
             
-            let processedText = text.replace(tablePattern, (match) => {
-                const lines = match.trim().split('\n');
-                if (lines.length < 3) return match;
-                
-                const headerLine = lines[0];
-                const dataLines = lines.slice(2);
-                
-                const headers = headerLine.split('|').map(h => h.trim()).filter(h => h !== '');
-                const rows = dataLines.map(line => 
-                    line.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
-                ).filter(row => row.length > 0);
-                
-                let html = '<table>';
-                
-                if (headers.length > 0) {
-                    html += '<thead><tr>';
-                    headers.forEach(header => {
-                        html += `<th>${header}</th>`;
-                    });
-                    html += '</tr></thead>';
-                }
-                
-                if (rows.length > 0) {
-                    html += '<tbody>';
-                    rows.forEach(row => {
-                        html += '<tr>';
-                        row.forEach((cell, index) => {
-                            if (index < headers.length) {
-                                html += `<td>${cell}</td>`;
-                            }
-                        });
-                        html += '</tr>';
-                    });
-                    html += '</tbody>';
-                }
-                
-                html += '</table>';
-                return html;
-            });
-            
-            // Handle simpler pipe-separated format (like in your screenshot)
-            const simplePipePattern = /(\|[^|\n]+)+\|/g;
-            const lines = processedText.split('\n');
-            
-            // Look for consecutive lines with pipe separators
-            let tableStart = -1;
-            const tableLines = [];
+            // Split text into lines
+            const lines = text.split('\n');
+            let result = [];
+            let currentTable = [];
+            let inTable = false;
             
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
-                if (line.includes('|') && line.split('|').length > 3) {
-                    if (tableStart === -1) tableStart = i;
-                    tableLines.push(line);
-                } else if (tableStart !== -1) {
-                    // End of table found
-                    if (tableLines.length >= 2) {
-                        const tableHtml = convertPipeTableToHtml(tableLines);
-                        // Replace the table lines with HTML
-                        lines.splice(tableStart, tableLines.length, tableHtml);
-                        i = tableStart; // Reset index
+                
+                // Check if this line looks like a table row (contains multiple |)
+                const pipeCount = (line.match(/\|/g) || []).length;
+                if (pipeCount >= 3 && line.startsWith('|') && line.endsWith('|')) {
+                    // This looks like a table row
+                    if (!inTable) {
+                        inTable = true;
+                        currentTable = [];
                     }
-                    tableStart = -1;
-                    tableLines.length = 0;
+                    // Skip separator lines (lines with mostly dashes)
+                    if (!line.match(/^\|[\s\-|]+\|$/)) {
+                        currentTable.push(line);
+                    }
+                } else {
+                    // Not a table row
+                    if (inTable) {
+                        // End of table - convert and add
+                        if (currentTable.length > 0) {
+                            const tableHtml = createHtmlTable(currentTable);
+                            result.push(tableHtml);
+                        }
+                        inTable = false;
+                        currentTable = [];
+                    }
+                    // Add non-table line
+                    if (line.length > 0) {
+                        result.push(line);
+                    }
                 }
             }
             
             // Handle table at end of text
-            if (tableStart !== -1 && tableLines.length >= 2) {
-                const tableHtml = convertPipeTableToHtml(tableLines);
-                lines.splice(tableStart, tableLines.length, tableHtml);
+            if (inTable && currentTable.length > 0) {
+                const tableHtml = createHtmlTable(currentTable);
+                result.push(tableHtml);
             }
             
-            return lines.join('\n');
+            const finalResult = result.join('\n');
+            console.log('Table parsing output:', finalResult);
+            return finalResult;
         }
         
-        // Convert simple pipe-separated lines to HTML table
-        function convertPipeTableToHtml(tableLines) {
-            if (tableLines.length < 2) return tableLines.join('\n');
+        // Create HTML table from pipe-separated lines
+        function createHtmlTable(tableLines) {
+            if (tableLines.length === 0) return '';
             
-            // Filter out separator lines (lines with mostly dashes)
-            const dataLines = tableLines.filter(line => !line.match(/^\|[\s\-|]+\|$/));
+            console.log('Creating table from lines:', tableLines);
             
-            if (dataLines.length < 1) return tableLines.join('\n');
+            // Parse all lines
+            const rows = tableLines.map(line => {
+                return line.split('|')
+                    .map(cell => cell.trim())
+                    .filter(cell => cell !== ''); // Remove empty cells from start/end
+            });
             
-            // First non-separator line is header
-            const headerLine = dataLines[0];
-            const dataRows = dataLines.slice(1);
+            if (rows.length === 0 || rows[0].length === 0) return tableLines.join('\n');
             
-            const headers = headerLine.split('|').map(h => h.trim()).filter(h => h !== '');
+            // First row is header
+            const headers = rows[0];
+            const dataRows = rows.slice(1);
             
             let html = '<table>';
             
             // Add header
-            if (headers.length > 0) {
-                html += '<thead><tr>';
-                headers.forEach(header => {
-                    html += `<th>${header}</th>`;
-                });
-                html += '</tr></thead>';
-            }
+            html += '<thead><tr>';
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead>';
             
             // Add data rows
             if (dataRows.length > 0) {
                 html += '<tbody>';
-                dataRows.forEach(rowLine => {
-                    const cells = rowLine.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
-                    if (cells.length > 0) {
-                        html += '<tr>';
-                        cells.forEach((cell, index) => {
-                            if (index < headers.length) {
-                                html += `<td>${cell}</td>`;
-                            }
-                        });
-                        html += '</tr>';
+                dataRows.forEach(row => {
+                    html += '<tr>';
+                    for (let i = 0; i < headers.length; i++) {
+                        const cell = row[i] || '';
+                        html += `<td>${cell}</td>`;
                     }
+                    html += '</tr>';
                 });
                 html += '</tbody>';
             }
             
             html += '</table>';
+            
+            console.log('Generated table HTML:', html);
             return html;
         }
         
