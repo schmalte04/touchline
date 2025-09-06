@@ -37,7 +37,7 @@
             right: 0;
             bottom: 0;
             pointer-events: none;
-            z-index: 9999;
+            z-index: 1000;
         }
         
         .demo-banner {
@@ -53,7 +53,7 @@
             font-weight: 600;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             pointer-events: auto;
-            z-index: 10001;
+            z-index: 1001;
             animation: slideDown 0.5s ease-out;
         }
         
@@ -96,7 +96,32 @@
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
             animation: bounce 2s infinite;
             pointer-events: none;
-            z-index: 10001;
+            z-index: 1001;
+        }
+        
+        /* Ensure widget appears above everything */
+        .touchline-widget {
+            z-index: 99999 !important;
+        }
+        
+        /* Emergency fallback widget button */
+        .emergency-widget-button {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            width: 60px !important;
+            height: 60px !important;
+            background: #4CAF50 !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            color: white !important;
+            font-size: 24px !important;
+            cursor: pointer !important;
+            z-index: 99999 !important;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4) !important;
+            border: none !important;
         }
         
         .demo-pointer::after {
@@ -135,7 +160,7 @@
             font-size: 13px;
             line-height: 1.4;
             pointer-events: auto;
-            z-index: 10001;
+            z-index: 1001;
             backdrop-filter: blur(10px);
         }
         
@@ -175,7 +200,7 @@
             border-radius: 8px;
             font-size: 11px;
             pointer-events: auto;
-            z-index: 10001;
+            z-index: 1001;
             max-width: 400px;
             border: 1px solid #333;
         }
@@ -207,7 +232,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            z-index: 10002;
+            z-index: 1002;
             transition: opacity 0.5s ease-out;
         }
         
@@ -242,7 +267,7 @@
             padding: 20px;
             border-radius: 12px;
             text-align: center;
-            z-index: 10003;
+            z-index: 1003;
             max-width: 90vw;
         }
         
@@ -335,7 +360,8 @@
             position: 'bottom-right',
             theme: 'light',
             primaryColor: '#4CAF50',
-            apiUrl: 'https://shark-app-robkv.ondigitalocean.app'
+            apiUrl: 'https://shark-app-robkv.ondigitalocean.app',
+            zIndex: 15000  // Ensure widget appears above all demo elements
         };
         
         // Handle iframe loading
@@ -415,6 +441,73 @@
     </script>
     
     <!-- Load Touchline Widget -->
-    <script src="/widget/touchline-widget.js"></script>
+    <script>
+        // Debug widget loading
+        console.log('🎯 Loading Touchline Widget...');
+        console.log('Config:', window.TouchlineConfig);
+        
+        // Ensure DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadWidget);
+        } else {
+            loadWidget();
+        }
+        
+        function loadWidget() {
+            console.log('📦 DOM ready, loading widget script...');
+            const script = document.createElement('script');
+            script.src = '/widget/touchline-widget.js';
+            script.onload = function() {
+                console.log('✅ Widget script loaded successfully');
+                // Check if widget actually appeared after 2 seconds
+                setTimeout(checkWidgetPresence, 2000);
+            };
+            script.onerror = function() {
+                console.error('❌ Failed to load widget script');
+                // Show emergency button
+                showEmergencyButton();
+                // Fallback: try loading from direct path
+                const fallbackScript = document.createElement('script');
+                fallbackScript.src = './touchline-widget.js';
+                fallbackScript.onload = function() {
+                    console.log('✅ Fallback widget script loaded');
+                    setTimeout(checkWidgetPresence, 2000);
+                };
+                fallbackScript.onerror = function() {
+                    console.error('❌ Fallback widget script also failed');
+                    showEmergencyButton();
+                };
+                document.head.appendChild(fallbackScript);
+            };
+            document.head.appendChild(script);
+        }
+        
+        function checkWidgetPresence() {
+            const widget = document.querySelector('.touchline-widget');
+            if (!widget) {
+                console.warn('⚠️ Widget not found in DOM, showing emergency button');
+                showEmergencyButton();
+            } else {
+                console.log('✅ Widget found in DOM');
+            }
+        }
+        
+        function showEmergencyButton() {
+            // Remove any existing emergency button
+            const existing = document.getElementById('emergency-widget');
+            if (existing) existing.remove();
+            
+            const button = document.createElement('button');
+            button.id = 'emergency-widget';
+            button.className = 'emergency-widget-button';
+            button.innerHTML = '🤖';
+            button.title = 'Chat with Touchline AI';
+            button.onclick = function() {
+                alert('This would open the AI chat interface. Widget loading failed - this is a fallback demo button.');
+            };
+            document.body.appendChild(button);
+            console.log('🚨 Emergency widget button created');
+        }
+    </script>
 </body>
 </html>
