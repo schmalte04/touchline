@@ -683,55 +683,61 @@
         
         // Convert markdown-style tables to HTML tables
         function formatMarkdownTables(text) {
-            console.log('Table parsing input:', text);
+            console.log('🔍 Table parsing input:', text);
             
-            // Split text into lines
+            // More aggressive approach - look for any lines with multiple pipes
             const lines = text.split('\n');
             let result = [];
-            let currentTable = [];
-            let inTable = false;
+            let i = 0;
             
-            for (let i = 0; i < lines.length; i++) {
+            while (i < lines.length) {
                 const line = lines[i].trim();
                 
-                // Check if this line looks like a table row (contains multiple |)
+                // Check if this line has multiple pipes (potential table row)
                 const pipeCount = (line.match(/\|/g) || []).length;
-                if (pipeCount >= 3 && line.startsWith('|') && line.endsWith('|')) {
-                    // This looks like a table row
-                    if (!inTable) {
-                        inTable = true;
-                        currentTable = [];
-                    }
-                    // Skip separator lines (lines with mostly dashes)
-                    if (!line.match(/^\|[\s\-|]+\|$/)) {
-                        currentTable.push(line);
-                    }
-                } else {
-                    // Not a table row
-                    if (inTable) {
-                        // End of table - convert and add
-                        if (currentTable.length > 0) {
-                            const tableHtml = createHtmlTable(currentTable);
-                            result.push(tableHtml);
+                
+                if (pipeCount >= 2 && line.includes('|')) {
+                    console.log('🎯 Found potential table line:', line);
+                    
+                    // Look ahead to find consecutive table lines
+                    const tableLines = [];
+                    let j = i;
+                    
+                    while (j < lines.length) {
+                        const currentLine = lines[j].trim();
+                        const currentPipes = (currentLine.match(/\|/g) || []).length;
+                        
+                        if (currentPipes >= 2 && currentLine.includes('|')) {
+                            // Skip separator lines (lines with mostly dashes)
+                            if (!currentLine.match(/^[\|\s\-]+$/)) {
+                                tableLines.push(currentLine);
+                            }
+                            j++;
+                        } else {
+                            break;
                         }
-                        inTable = false;
-                        currentTable = [];
                     }
-                    // Add non-table line
-                    if (line.length > 0) {
-                        result.push(line);
+                    
+                    console.log('📊 Table lines found:', tableLines);
+                    
+                    if (tableLines.length >= 2) {
+                        // Convert to HTML table
+                        const tableHtml = createHtmlTable(tableLines);
+                        result.push(tableHtml);
+                        i = j; // Skip processed lines
+                        continue;
                     }
                 }
+                
+                // Not a table line, add as regular text
+                if (line.length > 0) {
+                    result.push(line);
+                }
+                i++;
             }
             
-            // Handle table at end of text
-            if (inTable && currentTable.length > 0) {
-                const tableHtml = createHtmlTable(currentTable);
-                result.push(tableHtml);
-            }
-            
-            const finalResult = result.join('\n');
-            console.log('Table parsing output:', finalResult);
+            const finalResult = result.join('\n\n');
+            console.log('✅ Final processed text:', finalResult);
             return finalResult;
         }
         
@@ -739,16 +745,21 @@
         function createHtmlTable(tableLines) {
             if (tableLines.length === 0) return '';
             
-            console.log('Creating table from lines:', tableLines);
+            console.log('🏗️ Creating table from lines:', tableLines);
             
-            // Parse all lines
+            // Clean and parse all lines
             const rows = tableLines.map(line => {
-                return line.split('|')
-                    .map(cell => cell.trim())
-                    .filter(cell => cell !== ''); // Remove empty cells from start/end
-            });
+                // Remove leading/trailing pipes and split
+                let cleanLine = line.trim();
+                if (cleanLine.startsWith('|')) cleanLine = cleanLine.substring(1);
+                if (cleanLine.endsWith('|')) cleanLine = cleanLine.substring(0, cleanLine.length - 1);
+                
+                return cleanLine.split('|').map(cell => cell.trim());
+            }).filter(row => row.length > 1); // Only keep rows with multiple cells
             
-            if (rows.length === 0 || rows[0].length === 0) return tableLines.join('\n');
+            if (rows.length === 0) return tableLines.join('\n');
+            
+            console.log('📋 Parsed rows:', rows);
             
             // First row is header
             const headers = rows[0];
@@ -759,7 +770,7 @@
             // Add header
             html += '<thead><tr>';
             headers.forEach(header => {
-                html += `<th>${header}</th>`;
+                html += `<th>${header || ''}</th>`;
             });
             html += '</tr></thead>';
             
@@ -779,7 +790,7 @@
             
             html += '</table>';
             
-            console.log('Generated table HTML:', html);
+            console.log('🎨 Generated table HTML:', html);
             return html;
         }
         
