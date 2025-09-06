@@ -174,7 +174,7 @@
         }
         
         .widget-chat {
-            width: 380px;
+            width: 480px;
             height: 600px;
             background: white;
             border-radius: 16px;
@@ -309,6 +309,84 @@
         .user-message .message-text {
             background: linear-gradient(135deg, ${primaryColor}, #6C5CE7);
             color: white;
+        }
+        
+        /* Table styling for better data presentation */
+        .message-text table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 11px;
+            background: white;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .message-text th,
+        .message-text td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+            word-wrap: break-word;
+            max-width: 80px;
+        }
+        
+        .message-text th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .message-text tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .message-text tr:hover {
+            background: #e9ecef;
+        }
+        
+        .message-text tr:last-child td {
+            border-bottom: none;
+        }
+        
+        /* Handle pre-formatted text better */
+        .message-text pre {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.4;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            border-left: 3px solid ${primaryColor};
+        }
+        
+        /* Dark theme table adjustments */
+        .dark-theme .message-text table {
+            background: #34495e;
+        }
+        
+        .dark-theme .message-text th {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+        
+        .dark-theme .message-text tr:nth-child(even) {
+            background: #2c3e50;
+        }
+        
+        .dark-theme .message-text tr:hover {
+            background: #34495e;
+        }
+        
+        .dark-theme .message-text pre {
+            background: #2c3e50;
+            color: #ecf0f1;
         }
         
         .widget-quick-actions {
@@ -474,7 +552,7 @@
             display: none;
         }
         
-        @media (max-width: 420px) {
+        @media (max-width: 520px) {
             .widget-chat {
                 width: calc(100vw - 40px);
                 height: calc(100vh - 40px);
