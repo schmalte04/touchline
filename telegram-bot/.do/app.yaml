@@ -1,0 +1,21 @@
+name: touchline-telegram-bot
+services:
+- name: telegram-bot
+  source_dir: /
+  github:
+    repo: schmalte04/touchline
+    branch: main
+    deploy_on_push: true
+  build_command: npm install
+  run_command: npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  envs:
+  - key: TELEGRAM_BOT_TOKEN
+    value: "8266337310:AAHJ0tW_B-eWqHpfZYhmbzPKBy1Y14ddMPg"
+    type: SECRET
+  - key: API_BASE_URL
+    value: "https://shark-app-robkv.ondigitalocean.app"
+  - key: NODE_ENV
+    value: "production"

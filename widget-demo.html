@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touchline Chat Widget - Embeddable Demo</title>
+    <style>
+        /* Demo page styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .demo-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        
+        .demo-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .demo-header h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .demo-header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin: 50px 0;
+        }
+        
+        .feature-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .feature-card h3 {
+            color: #FFD700;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 60px 0;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .cta-button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            margin: 10px;
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .integration-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 15px;
+            margin: 40px 0;
+        }
+        
+        .integration-info h3 {
+            color: #4ECDC4;
+            margin-bottom: 20px;
+        }
+        
+        .code-block {
+            background: #1e1e1e;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-content">
+        <div class="demo-header">
+            <h1>🎯 Touchline AI Betting Assistant</h1>
+            <p>Experience the power of AI-driven football betting analysis. Click the chat widget in the bottom right to start exploring!</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>🏈 Smart Match Analysis</h3>
+                <p>Get detailed insights on upcoming matches with ELO ratings, xG predictions, and historical performance data.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>🎲 Accumulator Builder</h3>
+                <p>Build optimized multi-bet combinations with AI-powered risk assessment and value detection.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>⭐ High Confidence Picks</h3>
+                <p>Discover the best value betting opportunities with confidence scoring and market inefficiency detection.</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3>📊 Real-time Insights</h3>
+                <p>Access live odds analysis, team form assessment, and league-specific intelligence.</p>
+            </div>
+        </div>
+        
+        <div class="cta-section">
+            <h2>🚀 Ready to Transform Your Sports Platform?</h2>
+            <p>Integrate Touchline AI into your website and offer your users professional betting analysis</p>
+            <button class="cta-button" onclick="openChat()">Try the Chat Widget →</button>
+            <button class="cta-button" onclick="showIntegration()">View Integration Code</button>
+        </div>
+        
+        <div class="integration-info" id="integrationInfo" style="display: none;">
+            <h3>💻 Easy Integration</h3>
+            <p>Add this single line of code to any website to embed the Touchline chat widget:</p>
+            <div class="code-block">
+&lt;script src="https://shark-app-robkv.ondigitalocean.app/widget/touchline-widget.js"&gt;&lt;/script&gt;
+            </div>
+            <p><strong>That's it!</strong> The widget will automatically appear in the bottom right corner, just like on this demo page.</p>
+            
+            <h4>🎨 Customization Options:</h4>
+            <div class="code-block">
+&lt;script&gt;
+window.TouchlineConfig = {
+    position: 'bottom-right', // bottom-left, top-right, top-left
+    theme: 'dark', // dark, light, auto
+    primaryColor: '#4ECDC4',
+    apiUrl: 'https://shark-app-robkv.ondigitalocean.app'
+};
+&lt;/script&gt;
+&lt;script src="https://shark-app-robkv.ondigitalocean.app/widget/touchline-widget.js"&gt;&lt;/script&gt;
+            </div>
+        </div>
+    </div>
+
+    <!-- Touchline Chat Widget -->
+    <div id="touchline-widget"></div>
+    
+    <script>
+        function openChat() {
+            const widget = document.querySelector('.touchline-widget');
+            if (widget) {
+                widget.classList.add('expanded');
+                widget.querySelector('.widget-header').click();
+            }
+        }
+        
+        function showIntegration() {
+            const info = document.getElementById('integrationInfo');
+            info.style.display = info.style.display === 'none' ? 'block' : 'none';
+        }
+    </script>
+    
+    <!-- Load the Touchline Widget -->
+    <script src="./touchline-widget.js"></script>
+</body>
+</html>

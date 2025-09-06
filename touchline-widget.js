@@ -25,6 +25,9 @@
             
             <div class="widget-chat" id="touchline-chat">
                 <div class="widget-header">
+                    <button class="mobile-collapse-btn" id="mobile-collapse" style="display: none;">
+                        <span>‹</span>
+                    </button>
                     <div class="widget-header-content">
                         <div class="widget-title">
                             <span class="widget-logo">⚽</span>
@@ -270,6 +273,26 @@
         
         .widget-close:hover {
             background: rgba(255,255,255,0.1);
+        }
+        
+        .mobile-collapse-btn {
+            display: none;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            width: 32px;
+            height: 32px;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .mobile-collapse-btn:hover {
+            background: rgba(255,255,255,0.3);
         }
         
         .widget-messages {
@@ -577,44 +600,56 @@
         
         @media (max-width: 520px) {
             .widget-chat {
-                width: calc(100vw - 20px);
-                height: calc(100vh - 100px);
-                bottom: 10px;
-                right: 10px;
-                left: 10px;
-                top: auto;
-                max-height: 80vh;
+                width: calc(100vw - 20px) !important;
+                height: calc(100vh - 150px) !important;
+                bottom: 10px !important;
+                right: 10px !important;
+                left: 10px !important;
+                top: auto !important;
+                max-height: 75vh !important;
+                position: fixed !important;
+                z-index: 999999 !important;
+                font-size: 13px !important;
             }
             
             .touchline-widget[data-position="bottom-left"] .widget-chat,
             .touchline-widget[data-position="top-left"] .widget-chat,
             .touchline-widget[data-position="top-right"] .widget-chat,
             .touchline-widget[data-position="bottom-right"] .widget-chat {
-                right: 10px;
-                left: 10px;
-                bottom: 10px;
-                top: auto;
-                width: calc(100vw - 20px);
-                height: calc(100vh - 100px);
-                max-height: 80vh;
+                right: 10px !important;
+                left: 10px !important;
+                bottom: 10px !important;
+                top: auto !important;
+                width: calc(100vw - 20px) !important;
+                height: calc(100vh - 150px) !important;
+                max-height: 75vh !important;
+                position: fixed !important;
+                z-index: 999999 !important;
+                font-size: 13px !important;
             }
             
             .widget-bubble {
                 width: 56px;
                 height: 56px;
-                bottom: 20px;
-                right: 20px;
+                position: fixed !important;
+                z-index: 999998 !important;
+            }
+            
+            .touchline-widget[data-position="bottom-right"] .widget-bubble {
+                bottom: 20px !important;
+                right: 20px !important;
             }
             
             .touchline-widget[data-position="bottom-left"] .widget-bubble {
-                left: 20px;
-                right: auto;
+                left: 20px !important;
+                right: auto !important;
+                bottom: 20px !important;
             }
             
             .touchline-widget[data-position="top-right"] .widget-bubble,
             .touchline-widget[data-position="top-left"] .widget-bubble {
-                top: 20px;
-                bottom: auto;
+                top: 20px !important;
+                bottom: auto !important;
             }
             
             .widget-icon {
@@ -622,46 +657,115 @@
                 height: 24px;
             }
             
+            .widget-header {
+                padding: 12px 16px !important;
+                position: relative;
+            }
+            
+            .widget-title {
+                font-size: 14px !important;
+            }
+            
+            .widget-subtitle {
+                font-size: 11px !important;
+            }
+            
+            .widget-close {
+                width: 32px !important;
+                height: 32px !important;
+                display: none !important; /* Hide default close on mobile */
+            }
+            
+            .mobile-collapse-btn {
+                display: flex !important;
+            }
+            
             .widget-messages {
-                padding: 16px;
+                padding: 12px;
+                font-size: 13px !important;
+            }
+            
+            .message-text {
+                padding: 10px 12px !important;
+                font-size: 13px !important;
+                line-height: 1.4 !important;
             }
             
             .widget-quick-actions {
-                padding: 12px 16px;
+                padding: 10px 12px;
                 gap: 6px;
             }
             
             .quick-action-btn {
                 font-size: 10px;
-                padding: 6px 10px;
+                padding: 6px 8px;
             }
             
             .widget-input {
-                padding: 12px 16px;
+                padding: 10px 12px;
             }
             
             .widget-input input {
-                font-size: 16px; /* Prevents zoom on iOS */
+                font-size: 14px; /* Prevents zoom on iOS but smaller than before */
+                padding: 8px 12px !important;
             }
             
-            /* Ensure chat shows properly on mobile */
+            .widget-send {
+                width: 36px !important;
+                height: 36px !important;
+            }
+            
+            .widget-footer {
+                padding: 6px 12px !important;
+                font-size: 10px !important;
+            }
+            
+            /* Force show chat on mobile when expanded */
             .widget-expanded .widget-chat {
                 display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
                 position: fixed !important;
-                z-index: ${zIndex + 1} !important;
+                z-index: 999999 !important;
+                transform: translateX(0) !important;
+            }
+            
+            /* Hide bubble when expanded on mobile */
+            .widget-expanded .widget-bubble {
+                display: none !important;
             }
             
             /* Mobile-specific table styling */
             .message-text table {
-                font-size: 10px;
-                margin: 8px 0;
+                font-size: 9px;
+                margin: 6px 0;
             }
             
             .message-text th,
             .message-text td {
-                padding: 4px 6px;
-                max-width: 60px;
+                padding: 3px 4px;
+                max-width: 50px;
                 word-break: break-word;
+                font-size: 9px !important;
+            }
+            
+            /* Mobile collapse button */
+            .mobile-collapse-btn {
+                display: block !important;
+                position: absolute;
+                top: 12px;
+                left: 16px;
+                background: rgba(255,255,255,0.2);
+                border: none;
+                color: white;
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
     `;
@@ -682,6 +786,7 @@
         const bubble = document.getElementById('touchline-bubble');
         const chat = document.getElementById('touchline-chat');
         const closeBtn = document.getElementById('touchline-close');
+        const mobileCollapseBtn = document.getElementById('mobile-collapse');
         const input = document.getElementById('touchline-input');
         const sendBtn = document.getElementById('touchline-send');
         const messages = document.getElementById('touchline-messages');
@@ -692,15 +797,55 @@
         
         // Event handlers
         bubble.addEventListener('click', () => {
+            console.log('📱 Bubble clicked');
             isExpanded = true;
             widget.classList.add('widget-expanded');
+            
+            // Mobile-specific handling
+            if (window.innerWidth <= 520) {
+                setTimeout(() => {
+                    const chatElement = document.getElementById('touchline-chat');
+                    if (chatElement) {
+                        chatElement.style.display = 'flex';
+                        chatElement.style.position = 'fixed';
+                        chatElement.style.zIndex = '999999';
+                        chatElement.style.visibility = 'visible';
+                        chatElement.style.opacity = '1';
+                        chatElement.style.width = 'calc(100vw - 20px)';
+                        chatElement.style.height = 'calc(100vh - 150px)';
+                        chatElement.style.left = '10px';
+                        chatElement.style.right = '10px';
+                        chatElement.style.bottom = '10px';
+                        chatElement.style.top = 'auto';
+                        chatElement.style.fontSize = '13px';
+                        console.log('📱 Applied mobile-specific styles');
+                    }
+                }, 50);
+            }
         });
         
         // Add touch support for mobile
         bubble.addEventListener('touchend', (e) => {
             e.preventDefault();
+            e.stopPropagation();
+            console.log('📱 Bubble touched on mobile');
             isExpanded = true;
             widget.classList.add('widget-expanded');
+            
+            // Force mobile visibility
+            if (window.innerWidth <= 520) {
+                setTimeout(() => {
+                    const chatElement = document.getElementById('touchline-chat');
+                    if (chatElement) {
+                        chatElement.style.display = 'flex';
+                        chatElement.style.position = 'fixed';
+                        chatElement.style.zIndex = '999999';
+                        chatElement.style.visibility = 'visible';
+                        chatElement.style.opacity = '1';
+                        console.log('📱 Forced mobile chat visibility');
+                    }
+                }, 100);
+            }
         });
         
         closeBtn.addEventListener('click', () => {
@@ -709,6 +854,18 @@
         });
         
         closeBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isExpanded = false;
+            widget.classList.remove('widget-expanded');
+        });
+        
+        // Mobile collapse button handlers
+        mobileCollapseBtn.addEventListener('click', () => {
+            isExpanded = false;
+            widget.classList.remove('widget-expanded');
+        });
+        
+        mobileCollapseBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
             isExpanded = false;
             widget.classList.remove('widget-expanded');
@@ -1065,17 +1222,51 @@
                 isExpanded = true;
                 widget.classList.add('widget-expanded');
                 
+                // Force mobile chat to show
+                const chatElement = document.getElementById('touchline-chat');
+                if (chatElement) {
+                    chatElement.style.display = 'flex';
+                    chatElement.style.position = 'fixed';
+                    chatElement.style.zIndex = '999999';
+                    chatElement.style.visibility = 'visible';
+                    chatElement.style.opacity = '1';
+                    chatElement.style.width = 'calc(100vw - 20px)';
+                    chatElement.style.height = 'calc(100vh - 150px)';
+                    chatElement.style.left = '10px';
+                    chatElement.style.right = '10px';
+                    chatElement.style.bottom = '10px';
+                    chatElement.style.top = 'auto';
+                    chatElement.style.fontSize = '13px';
+                }
+                
                 // Double-check visibility on mobile
                 setTimeout(() => {
-                    const chatElement = document.getElementById('touchline-chat');
                     if (chatElement) {
                         const computedStyle = window.getComputedStyle(chatElement);
                         console.log('📱 Chat visibility:', computedStyle.display);
                         console.log('📱 Chat position:', computedStyle.position);
                         console.log('📱 Chat z-index:', computedStyle.zIndex);
+                        console.log('📱 Chat opacity:', computedStyle.opacity);
+                        console.log('📱 Chat dimensions:', computedStyle.width + 'x' + computedStyle.height);
                     }
                 }, 500);
             }, 1500); // Longer delay for mobile
+        }
+        
+        // Add mobile-specific debugging
+        if (isMobile) {
+            console.log('📱 Mobile mode activated');
+            console.log('📱 Viewport:', window.innerWidth + 'x' + window.innerHeight);
+            
+            // Test if the widget container is properly positioned
+            setTimeout(() => {
+                const widgetElement = document.querySelector('.touchline-widget');
+                if (widgetElement) {
+                    const style = window.getComputedStyle(widgetElement);
+                    console.log('📱 Widget position:', style.position);
+                    console.log('📱 Widget z-index:', style.zIndex);
+                }
+            }, 1000);
         }
     }
     

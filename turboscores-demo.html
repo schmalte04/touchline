@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turboscores - Demo mit Touchline AI Integration</title>
+    <style>
+        /* Turboscores-like styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fb;
+            color: #333;
+        }
+        
+        .header {
+            background: #1a1a1a;
+            color: white;
+            padding: 12px 0;
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .nav a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        
+        .nav a:hover {
+            color: #4CAF50;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .matches-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .match-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .match-item:last-child {
+            border-bottom: none;
+        }
+        
+        .match-teams {
+            flex: 1;
+        }
+        
+        .team {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .team-name {
+            font-weight: 500;
+            margin-left: 8px;
+        }
+        
+        .match-score {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+            margin: 0 20px;
+        }
+        
+        .match-odds {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .odd-button {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .odd-button:hover {
+            background: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        .league-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        
+        .league-flag {
+            width: 20px;
+            height: 15px;
+            background: linear-gradient(to bottom, #000 33%, #ff0000 33% 66%, #ffce00 66%);
+            border-radius: 2px;
+        }
+        
+        .league-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .demo-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+        
+        .demo-banner h2 {
+            margin-bottom: 10px;
+        }
+        
+        .demo-banner p {
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        
+        .demo-highlight {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .demo-highlight strong {
+            color: #856404;
+        }
+        
+        .widget-pointer {
+            position: fixed;
+            bottom: 100px;
+            right: 100px;
+            background: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            animation: bounce 2s infinite;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        
+        .widget-pointer::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 15px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #4CAF50;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        .fade-out {
+            animation: fadeOut 1s ease-out forwards;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">TurboScores</div>
+            <nav class="nav">
+                <a href="#live">Live Scores</a>
+                <a href="#matches">Matches</a>
+                <a href="#leagues">Leagues</a>
+                <a href="#statistics">Statistics</a>
+                <a href="#betting">Betting</a>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="demo-banner">
+            <h2>🎯 Touchline AI Integration Demo</h2>
+            <p>Erleben Sie, wie KI-gestützte Wettanalysen in Ihre Plattform integriert werden können</p>
+            <p><strong>Klicken Sie auf das Chat-Widget unten rechts</strong> und fragen Sie nach Wett-Empfehlungen!</p>
+        </div>
+        
+        <div class="demo-highlight">
+            <strong>Demo-Features:</strong> Fragen Sie das KI-Widget nach "Zeige mir die besten Wetten für heute" oder "Erstelle mir einen Kombi-Schein" und erleben Sie intelligente Fußball-Analysen in Echtzeit.
+        </div>
+        
+        <div class="matches-section">
+            <div class="league-header">
+                <div class="league-flag"></div>
+                <span class="league-name">Bundesliga</span>
+            </div>
+            
+            <div class="match-item">
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">Bayern München</span>
+                    </div>
+                    <div class="team">
+                        <span class="team-name">Borussia Dortmund</span>
+                    </div>
+                </div>
+                <div class="match-score">2 : 1</div>
+                <div class="match-odds">
+                    <button class="odd-button">1.85</button>
+                    <button class="odd-button">3.40</button>
+                    <button class="odd-button">4.20</button>
+                </div>
+            </div>
+            
+            <div class="match-item">
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">RB Leipzig</span>
+                    </div>
+                    <div class="team">
+                        <span class="team-name">Bayer Leverkusen</span>
+                    </div>
+                </div>
+                <div class="match-score">1 : 0</div>
+                <div class="match-odds">
+                    <button class="odd-button">2.10</button>
+                    <button class="odd-button">3.20</button>
+                    <button class="odd-button">3.50</button>
+                </div>
+            </div>
+            
+            <div class="match-item">
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">Eintracht Frankfurt</span>
+                    </div>
+                    <div class="team">
+                        <span class="team-name">VfB Stuttgart</span>
+                    </div>
+                </div>
+                <div class="match-score">18:30</div>
+                <div class="match-odds">
+                    <button class="odd-button">2.40</button>
+                    <button class="odd-button">3.10</button>
+                    <button class="odd-button">2.90</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="matches-section">
+            <div class="league-header">
+                <span class="league-flag" style="background: linear-gradient(to bottom, #ff0000 50%, #ffffff 50%);"></span>
+                <span class="league-name">Premier League</span>
+            </div>
+            
+            <div class="match-item">
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">Manchester City</span>
+                    </div>
+                    <div class="team">
+                        <span class="team-name">Arsenal</span>
+                    </div>
+                </div>
+                <div class="match-score">20:30</div>
+                <div class="match-odds">
+                    <button class="odd-button">1.75</button>
+                    <button class="odd-button">3.60</button>
+                    <button class="odd-button">4.50</button>
+                </div>
+            </div>
+            
+            <div class="match-item">
+                <div class="match-teams">
+                    <div class="team">
+                        <span class="team-name">Liverpool</span>
+                    </div>
+                    <div class="team">
+                        <span class="team-name">Chelsea</span>
+                    </div>
+                </div>
+                <div class="match-score">15:00</div>
+                <div class="match-odds">
+                    <button class="odd-button">2.20</button>
+                    <button class="odd-button">3.40</button>
+                    <button class="odd-button">3.10</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Widget Pointer -->
+    <div class="widget-pointer" id="widgetPointer">
+        Hier klicken! 👉
+    </div>
+    
+    <!-- Touchline AI Widget Configuration -->
+    <script>
+        window.TouchlineConfig = {
+            position: 'bottom-right',
+            theme: 'light',
+            primaryColor: '#4CAF50',
+            apiUrl: 'https://shark-app-robkv.ondigitalocean.app'
+        };
+        
+        // Hide pointer after 10 seconds
+        setTimeout(() => {
+            const pointer = document.getElementById('widgetPointer');
+            if (pointer) {
+                pointer.classList.add('fade-out');
+                setTimeout(() => pointer.remove(), 1000);
+            }
+        }, 10000);
+        
+        // Hide pointer when widget is clicked
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.touchline-widget')) {
+                const pointer = document.getElementById('widgetPointer');
+                if (pointer) {
+                    pointer.classList.add('fade-out');
+                    setTimeout(() => pointer.remove(), 1000);
+                }
+            }
+        });
+    </script>
+    
+    <!-- Load Touchline Widget -->
+    <script src="./touchline-widget.js"></script>
+</body>
+</html>
