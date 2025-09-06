@@ -117,6 +117,29 @@
             left: 20px;
         }
         
+        /* Mobile positioning adjustments */
+        @media (max-width: 768px) {
+            .touchline-widget[data-position="bottom-right"] {
+                bottom: 20px;
+                right: 20px;
+            }
+            
+            .touchline-widget[data-position="bottom-left"] {
+                bottom: 20px;
+                left: 20px;
+            }
+            
+            .touchline-widget[data-position="top-right"] {
+                top: 20px;
+                right: 20px;
+            }
+            
+            .touchline-widget[data-position="top-left"] {
+                top: 20px;
+                left: 20px;
+            }
+        }
+        
         .widget-bubble {
             width: 60px;
             height: 60px;
@@ -554,21 +577,91 @@
         
         @media (max-width: 520px) {
             .widget-chat {
-                width: calc(100vw - 40px);
-                height: calc(100vh - 40px);
-                bottom: 20px;
-                right: 20px;
-                left: 20px;
-                top: 20px;
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                top: auto;
+                max-height: 80vh;
             }
             
             .touchline-widget[data-position="bottom-left"] .widget-chat,
             .touchline-widget[data-position="top-left"] .widget-chat,
-            .touchline-widget[data-position="top-right"] .widget-chat {
-                right: 20px;
-                left: 20px;
-                top: 20px;
+            .touchline-widget[data-position="top-right"] .widget-chat,
+            .touchline-widget[data-position="bottom-right"] .widget-chat {
+                right: 10px;
+                left: 10px;
+                bottom: 10px;
+                top: auto;
+                width: calc(100vw - 20px);
+                height: calc(100vh - 100px);
+                max-height: 80vh;
+            }
+            
+            .widget-bubble {
+                width: 56px;
+                height: 56px;
                 bottom: 20px;
+                right: 20px;
+            }
+            
+            .touchline-widget[data-position="bottom-left"] .widget-bubble {
+                left: 20px;
+                right: auto;
+            }
+            
+            .touchline-widget[data-position="top-right"] .widget-bubble,
+            .touchline-widget[data-position="top-left"] .widget-bubble {
+                top: 20px;
+                bottom: auto;
+            }
+            
+            .widget-icon {
+                width: 24px;
+                height: 24px;
+            }
+            
+            .widget-messages {
+                padding: 16px;
+            }
+            
+            .widget-quick-actions {
+                padding: 12px 16px;
+                gap: 6px;
+            }
+            
+            .quick-action-btn {
+                font-size: 10px;
+                padding: 6px 10px;
+            }
+            
+            .widget-input {
+                padding: 12px 16px;
+            }
+            
+            .widget-input input {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            /* Ensure chat shows properly on mobile */
+            .widget-expanded .widget-chat {
+                display: flex !important;
+                position: fixed !important;
+                z-index: ${zIndex + 1} !important;
+            }
+            
+            /* Mobile-specific table styling */
+            .message-text table {
+                font-size: 10px;
+                margin: 8px 0;
+            }
+            
+            .message-text th,
+            .message-text td {
+                padding: 4px 6px;
+                max-width: 60px;
+                word-break: break-word;
             }
         }
     `;
@@ -603,7 +696,20 @@
             widget.classList.add('widget-expanded');
         });
         
+        // Add touch support for mobile
+        bubble.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            isExpanded = true;
+            widget.classList.add('widget-expanded');
+        });
+        
         closeBtn.addEventListener('click', () => {
+            isExpanded = false;
+            widget.classList.remove('widget-expanded');
+        });
+        
+        closeBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
             isExpanded = false;
             widget.classList.remove('widget-expanded');
         });
@@ -917,11 +1023,22 @@
             sendMessage();
         });
         
-        // Close on outside click
+        // Close on outside click (desktop only)
         document.addEventListener('click', (e) => {
-            if (isExpanded && !widget.contains(e.target)) {
+            if (isExpanded && !widget.contains(e.target) && window.innerWidth > 520) {
                 isExpanded = false;
                 widget.classList.remove('widget-expanded');
+            }
+        });
+        
+        // Mobile-specific close handling
+        document.addEventListener('touchend', (e) => {
+            if (isExpanded && !widget.contains(e.target) && window.innerWidth <= 520) {
+                // On mobile, only close if touching outside and not on input elements
+                if (!e.target.closest('input, textarea, button, .widget-chat')) {
+                    isExpanded = false;
+                    widget.classList.remove('widget-expanded');
+                }
             }
         });
         
@@ -930,7 +1047,36 @@
             e.stopPropagation();
         });
         
+        widget.addEventListener('touchend', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Mobile detection and debugging
+        const isMobile = window.innerWidth <= 520;
         console.log('🎯 Touchline AI Widget loaded successfully!');
+        console.log('📱 Mobile device detected:', isMobile);
+        console.log('🖥️ Screen size:', window.innerWidth + 'x' + window.innerHeight);
+        console.log('⚙️ Widget config:', { position, theme, openByDefault });
+        
+        // Auto-expand on mobile if configured
+        if (openByDefault && isMobile) {
+            setTimeout(() => {
+                console.log('📱 Auto-opening widget on mobile...');
+                isExpanded = true;
+                widget.classList.add('widget-expanded');
+                
+                // Double-check visibility on mobile
+                setTimeout(() => {
+                    const chatElement = document.getElementById('touchline-chat');
+                    if (chatElement) {
+                        const computedStyle = window.getComputedStyle(chatElement);
+                        console.log('📱 Chat visibility:', computedStyle.display);
+                        console.log('📱 Chat position:', computedStyle.position);
+                        console.log('📱 Chat z-index:', computedStyle.zIndex);
+                    }
+                }, 500);
+            }, 1500); // Longer delay for mobile
+        }
     }
     
     // Initialize when DOM is ready
