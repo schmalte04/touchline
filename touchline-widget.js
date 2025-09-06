@@ -662,23 +662,213 @@
             // Process text to convert markdown tables to HTML
             let processedText = text;
             if (type === 'bot') {
+                console.log('🚀 Processing bot message for tables...');
+                console.log('🔍 Original text:', text);
+                
                 processedText = formatMarkdownTables(text);
-                // Debug log
-                console.log('Original text:', text);
-                console.log('Processed text:', processedText);
+                console.log('📝 After formatMarkdownTables:', processedText);
+                
+                // Force check if we have any pipe characters that should be tables
+                if (text.includes('|') && processedText === text) {
+                    console.log('⚠️ Text contains pipes but no conversion happened, forcing simple conversion...');
+                    processedText = forceTableConversion(text);
+                    console.log('🔧 After forceTableConversion:', processedText);
+                }
+                
+                // Additional fallback - check if we still have pipes
+                if (processedText.includes('|') && !processedText.includes('<table>')) {
+                    console.log('🚨 Still has pipes but no table HTML, applying emergency conversion...');
+                    processedText = emergencyTableConversion(processedText);
+                    console.log('🆘 After emergency conversion:', processedText);
+                }
             }
             
-            const messageHTML = `
-                <div class="widget-message ${type}-message">
-                    <div class="message-avatar">${type === 'user' ? '👤' : '🤖'}</div>
-                    <div class="message-content">
-                        <div class="message-text">${processedText}</div>
-                    </div>
-                </div>
-            `;
+            // Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `widget-message ${type}-message`;
             
-            messages.insertAdjacentHTML('beforeend', messageHTML);
+            const avatarDiv = document.createElement('div');
+            avatarDiv.className = 'message-avatar';
+            avatarDiv.textContent = type === 'user' ? '👤' : '🤖';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const textDiv = document.createElement('div');
+            textDiv.className = 'message-text';
+            
+            // Insert HTML directly to preserve table structure
+            textDiv.innerHTML = processedText;
+            
+            contentDiv.appendChild(textDiv);
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            
+            messages.appendChild(messageDiv);
             scrollToBottom();
+        }
+        
+        // Emergency table conversion - most aggressive approach
+        function emergencyTableConversion(text) {
+            console.log('🆘 Emergency table conversion started');
+            
+            // Split into lines and find any line with multiple pipes
+            const lines = text.split('\n');
+            const processedLines = [];
+            
+            let currentTableLines = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Check if line has multiple pipes (potential table)
+                if (line.includes('|') && line.split('|').length >= 3) {
+                    currentTableLines.push(line);
+                } else {
+                    // Process any accumulated table lines
+                    if (currentTableLines.length > 0) {
+                        const tableHtml = bruteForcePipeToTable(currentTableLines);
+                        processedLines.push(tableHtml);
+                        currentTableLines = [];
+                    }
+                    
+                    // Add non-table line
+                    if (line.length > 0) {
+                        processedLines.push(line);
+                    }
+                }
+            }
+            
+            // Handle any remaining table lines
+            if (currentTableLines.length > 0) {
+                const tableHtml = bruteForcePipeToTable(currentTableLines);
+                processedLines.push(tableHtml);
+            }
+            
+            return processedLines.join('<br>');
+        }
+        
+        // Brute force pipe to table conversion
+        function bruteForcePipeToTable(lines) {
+            console.log('💥 Brute force conversion:', lines);
+            
+            if (lines.length === 0) return '';
+            
+            // Remove separator lines and clean data
+            const cleanLines = lines.filter(line => {
+                const cleaned = line.replace(/[\s\-]/g, '');
+                return cleaned !== '' && !cleaned.match(/^[\|]+$/);
+            });
+            
+            if (cleanLines.length < 1) return lines.join('<br>');
+            
+            // Parse each line
+            const tableRows = cleanLines.map(line => {
+                // Clean the line and split by pipes
+                let clean = line.trim();
+                if (clean.startsWith('|')) clean = clean.substring(1);
+                if (clean.endsWith('|')) clean = clean.substring(0, clean.length - 1);
+                
+                return clean.split('|').map(cell => cell.trim());
+            });
+            
+            console.log('🔨 Parsed table rows:', tableRows);
+            
+            // Build HTML table
+            let html = '<table style="width:100%; border-collapse: collapse; margin: 8px 0;">';
+            
+            // First row as header
+            if (tableRows.length > 0) {
+                html += '<thead><tr>';
+                tableRows[0].forEach(cell => {
+                    html += `<th style="padding: 6px 8px; border: 1px solid #ddd; background: #f5f5f5;">${cell || ''}</th>`;
+                });
+                html += '</tr></thead>';
+            }
+            
+            // Data rows
+            if (tableRows.length > 1) {
+                html += '<tbody>';
+                for (let i = 1; i < tableRows.length; i++) {
+                    html += '<tr>';
+                    tableRows[i].forEach(cell => {
+                        html += `<td style="padding: 6px 8px; border: 1px solid #ddd;">${cell || ''}</td>`;
+                    });
+                    html += '</tr>';
+                }
+                html += '</tbody>';
+            }
+            
+            html += '</table>';
+            
+            console.log('💪 Brute force result:', html);
+            return html;
+        }
+        
+        // Force table conversion for any text with pipes
+        function forceTableConversion(text) {
+            console.log('🔧 Force converting pipes to table...');
+            
+            const lines = text.split('\n');
+            let result = [];
+            let tableLines = [];
+            
+            for (const line of lines) {
+                if (line.includes('|') && line.split('|').length > 2) {
+                    tableLines.push(line.trim());
+                } else {
+                    // Non-table line
+                    if (tableLines.length > 0) {
+                        // Convert accumulated table lines
+                        const tableHtml = simpleTableConvert(tableLines);
+                        result.push(tableHtml);
+                        tableLines = [];
+                    }
+                    result.push(line);
+                }
+            }
+            
+            // Handle remaining table lines
+            if (tableLines.length > 0) {
+                const tableHtml = simpleTableConvert(tableLines);
+                result.push(tableHtml);
+            }
+            
+            return result.join('\n');
+        }
+        
+        // Simple table conversion
+        function simpleTableConvert(lines) {
+            if (lines.length < 2) return lines.join('\n');
+            
+            console.log('🔨 Simple table convert:', lines);
+            
+            // Filter out separator lines
+            const dataLines = lines.filter(line => !line.match(/^[\|\s\-]+$/));
+            
+            if (dataLines.length < 2) return lines.join('\n');
+            
+            const rows = dataLines.map(line => {
+                return line.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
+            });
+            
+            let html = '<table><thead><tr>';
+            rows[0].forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+            
+            for (let i = 1; i < rows.length; i++) {
+                html += '<tr>';
+                rows[i].forEach(cell => {
+                    html += `<td>${cell}</td>`;
+                });
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table>';
+            console.log('🎉 Simple table result:', html);
+            return html;
         }
         
         // Convert markdown-style tables to HTML tables
