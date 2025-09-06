@@ -45,6 +45,17 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// Root route - serve Turboscores iframe demo as main page
+app.get('/', (req, res) => {
+    try {
+        const demoPath = path.join(__dirname, '../turboscores-iframe-demo.html');
+        res.sendFile(demoPath);
+    } catch (error) {
+        console.error('❌ Error serving iframe demo:', error);
+        res.status(500).send('Demo not available');
+    }
+});
+
 // Serve static files from website directory with proper MIME types
 app.use(express.static(path.join(__dirname, '../website'), {
     setHeaders: function (res, path, stat) {
@@ -1058,6 +1069,16 @@ app.get('/turboscores-iframe-demo', (req, res) => {
         res.sendFile(demoPath);
     } catch (error) {
         res.status(500).send('Demo not available');
+    }
+});
+
+// Original website route
+app.get('/website', (req, res) => {
+    try {
+        const websitePath = path.join(__dirname, '../website/index.html');
+        res.sendFile(websitePath);
+    } catch (error) {
+        res.status(500).send('Website not available');
     }
 });
 
