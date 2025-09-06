@@ -84,19 +84,20 @@
         }
         
         .demo-pointer {
-            position: absolute;
-            bottom: 120px;
-            right: 120px;
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
             background: #4CAF50;
             color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
-            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
             font-weight: bold;
             box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
             animation: bounce 2s infinite;
             pointer-events: none;
             z-index: 1001;
+            transform: translateX(-50%);
         }
         
         /* Ensure widget appears above everything */
@@ -128,7 +129,8 @@
             content: '';
             position: absolute;
             bottom: -8px;
-            right: 25px;
+            left: 50%;
+            transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 8px solid transparent;
@@ -325,7 +327,7 @@
             
             <!-- Demo Pointer -->
             <div class="demo-pointer" id="demoPointer">
-                KI-Chat hier! 👉
+                KI-Chat aktiv! 🎯
             </div>
             
             <!-- Demo Information -->
@@ -361,7 +363,8 @@
             theme: 'light',
             primaryColor: '#4CAF50',
             apiUrl: 'https://shark-app-robkv.ondigitalocean.app',
-            zIndex: 15000  // Ensure widget appears above all demo elements
+            zIndex: 15000,  // Ensure widget appears above all demo elements
+            openByDefault: true  // Open chat interface immediately
         };
         
         // Handle iframe loading
@@ -393,7 +396,7 @@
         }
         
         // Hide pointer after 15 seconds or when widget is clicked
-        setTimeout(hidePointer, 15000);
+        setTimeout(hidePointer, 8000); // Shorter time since chat opens automatically
         
         // Listen for widget interactions
         document.addEventListener('click', (e) => {
@@ -409,6 +412,13 @@
                 }, 3000);
             }
         });
+        
+        // Auto-hide pointer when chat opens by default
+        setTimeout(() => {
+            if (window.TouchlineConfig && window.TouchlineConfig.openByDefault) {
+                hidePointer();
+            }
+        }, 2000);
         
         // Handle iframe errors
         document.getElementById('turboscoresFrame').addEventListener('error', function() {
