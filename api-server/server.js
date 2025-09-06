@@ -1019,6 +1019,48 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+// Widget endpoints for embeddable chat widget
+app.get('/widget/touchline-widget.js', (req, res) => {
+    try {
+        const widgetPath = path.join(__dirname, '../touchline-widget.js');
+        res.setHeader('Content-Type', 'application/javascript');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=300'); // 5 minute cache
+        res.sendFile(widgetPath);
+    } catch (error) {
+        console.error('❌ Widget file error:', error);
+        res.status(500).send('// Widget loading error');
+    }
+});
+
+// Widget demo pages
+app.get('/demo', (req, res) => {
+    try {
+        const demoPath = path.join(__dirname, '../widget-demo.html');
+        res.sendFile(demoPath);
+    } catch (error) {
+        res.status(500).send('Demo not available');
+    }
+});
+
+app.get('/turboscores-demo', (req, res) => {
+    try {
+        const demoPath = path.join(__dirname, '../turboscores-demo.html');
+        res.sendFile(demoPath);
+    } catch (error) {
+        res.status(500).send('Demo not available');
+    }
+});
+
+app.get('/turboscores-iframe-demo', (req, res) => {
+    try {
+        const demoPath = path.join(__dirname, '../turboscores-iframe-demo.html');
+        res.sendFile(demoPath);
+    } catch (error) {
+        res.status(500).send('Demo not available');
+    }
+});
+
 // Password validation endpoint
 app.post('/api/validate-password', (req, res) => {
     try {

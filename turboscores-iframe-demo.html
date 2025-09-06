@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turboscores + Touchline AI Integration Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            overflow: hidden;
+        }
+        
+        .demo-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        .turboscores-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .demo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+        
+        .demo-banner {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            pointer-events: auto;
+            z-index: 10001;
+            animation: slideDown 0.5s ease-out;
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+        
+        .demo-banner .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        
+        .demo-banner .close-btn:hover {
+            opacity: 1;
+        }
+        
+        .demo-pointer {
+            position: absolute;
+            bottom: 120px;
+            right: 120px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            animation: bounce 2s infinite;
+            pointer-events: none;
+            z-index: 10001;
+        }
+        
+        .demo-pointer::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 25px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #4CAF50;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-15px);
+            }
+            60% {
+                transform: translateY(-8px);
+            }
+        }
+        
+        .demo-info {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            max-width: 300px;
+            font-size: 13px;
+            line-height: 1.4;
+            pointer-events: auto;
+            z-index: 10001;
+            backdrop-filter: blur(10px);
+        }
+        
+        .demo-info h3 {
+            color: #4CAF50;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        
+        .demo-info ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .demo-info li {
+            margin: 6px 0;
+            padding-left: 16px;
+            position: relative;
+        }
+        
+        .demo-info li::before {
+            content: '✓';
+            color: #4CAF50;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+        
+        .integration-code {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            pointer-events: auto;
+            z-index: 10001;
+            max-width: 400px;
+            border: 1px solid #333;
+        }
+        
+        .integration-code h4 {
+            color: #4CAF50;
+            margin-bottom: 8px;
+            font-family: inherit;
+        }
+        
+        .fade-out {
+            animation: fadeOut 1s ease-out forwards;
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10002;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .mobile-warning {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            z-index: 10003;
+            max-width: 90vw;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-warning {
+                display: block;
+            }
+            
+            .demo-info,
+            .integration-code {
+                display: none;
+            }
+            
+            .demo-pointer {
+                bottom: 80px;
+                right: 80px;
+                font-size: 12px;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <h2>🎯 Loading Touchline AI Demo</h2>
+            <p>Embedding real Turboscores website...</p>
+        </div>
+        
+        <!-- Mobile Warning -->
+        <div class="mobile-warning">
+            <h3>📱 Mobile Notice</h3>
+            <p>This demo works best on desktop. On mobile, the AI chat will take full screen for optimal experience.</p>
+            <button onclick="this.parentElement.style.display='none'" style="margin-top: 10px; padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 6px;">Continue</button>
+        </div>
+        
+        <!-- Turboscores Website Iframe -->
+        <iframe 
+            src="https://www.turboscores.com/de/" 
+            class="turboscores-iframe"
+            id="turboscoresFrame"
+            sandbox="allow-scripts allow-same-origin allow-navigation allow-forms"
+            loading="lazy">
+        </iframe>
+        
+        <!-- Demo Overlay -->
+        <div class="demo-overlay">
+            <!-- Demo Banner -->
+            <div class="demo-banner" id="demoBanner">
+                🎯 <strong>Touchline AI Integration Demo</strong> - Chatbot läuft über der echten Turboscores Website
+                <button class="close-btn" onclick="closeBanner()">&times;</button>
+            </div>
+            
+            <!-- Demo Pointer -->
+            <div class="demo-pointer" id="demoPointer">
+                KI-Chat hier! 👉
+            </div>
+            
+            <!-- Demo Information -->
+            <div class="demo-info">
+                <h3>🚀 Live Demo Features</h3>
+                <ul>
+                    <li>Echte Turboscores Website</li>
+                    <li>KI-Chatbot Overlay</li>
+                    <li>Intelligente Wett-Analysen</li>
+                    <li>Akkumulator-Builder</li>
+                    <li>Live Quoten-Analyse</li>
+                </ul>
+                <p style="margin-top: 10px; font-size: 12px; opacity: 0.8;">
+                    Fragen Sie: "Zeige mir die besten Wetten" oder "Erstelle einen Kombi-Schein"
+                </p>
+            </div>
+            
+            <!-- Integration Code -->
+            <div class="integration-code">
+                <h4>💻 1-Line Integration</h4>
+                <code>&lt;script src="https://shark-app-robkv.ondigitalocean.app/widget/touchline-widget.js"&gt;&lt;/script&gt;</code>
+                <p style="margin-top: 8px; font-size: 10px; color: #888;">
+                    Das war's! Widget erscheint automatisch.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Touchline AI Widget Configuration -->
+    <script>
+        window.TouchlineConfig = {
+            position: 'bottom-right',
+            theme: 'light',
+            primaryColor: '#4CAF50',
+            apiUrl: 'https://shark-app-robkv.ondigitalocean.app'
+        };
+        
+        // Handle iframe loading
+        document.getElementById('turboscoresFrame').addEventListener('load', function() {
+            setTimeout(() => {
+                const loadingOverlay = document.getElementById('loadingOverlay');
+                loadingOverlay.classList.add('hidden');
+                setTimeout(() => loadingOverlay.remove(), 500);
+            }, 1000);
+        });
+        
+        // Hide demo elements after interaction
+        let interactionStarted = false;
+        
+        function hidePointer() {
+            const pointer = document.getElementById('demoPointer');
+            if (pointer) {
+                pointer.classList.add('fade-out');
+                setTimeout(() => pointer.remove(), 1000);
+            }
+        }
+        
+        function closeBanner() {
+            const banner = document.getElementById('demoBanner');
+            if (banner) {
+                banner.classList.add('fade-out');
+                setTimeout(() => banner.remove(), 500);
+            }
+        }
+        
+        // Hide pointer after 15 seconds or when widget is clicked
+        setTimeout(hidePointer, 15000);
+        
+        // Listen for widget interactions
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('.touchline-widget') && !interactionStarted) {
+                interactionStarted = true;
+                hidePointer();
+                
+                // Hide banner after first interaction
+                setTimeout(() => {
+                    if (document.getElementById('demoBanner')) {
+                        closeBanner();
+                    }
+                }, 3000);
+            }
+        });
+        
+        // Handle iframe errors
+        document.getElementById('turboscoresFrame').addEventListener('error', function() {
+            console.log('Iframe loading failed, showing fallback');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.innerHTML = `
+                <div style="text-align: center;">
+                    <h2>⚠️ Demo Notice</h2>
+                    <p>Turboscores website couldn't be loaded in iframe.</p>
+                    <p>This is normal due to security restrictions.</p>
+                    <br>
+                    <p><strong>The Touchline AI widget still works perfectly!</strong></p>
+                    <p>Click the chat bubble in the bottom right to test it.</p>
+                    <br>
+                    <button onclick="this.parentElement.parentElement.classList.add('hidden')" 
+                            style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                        Continue with Demo
+                    </button>
+                </div>
+            `;
+        });
+        
+        // Auto-hide loading after 5 seconds if iframe doesn't load
+        setTimeout(() => {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay && !loadingOverlay.classList.contains('hidden')) {
+                loadingOverlay.classList.add('hidden');
+            }
+        }, 5000);
+    </script>
+    
+    <!-- Load Touchline Widget -->
+    <script src="./touchline-widget.js"></script>
+</body>
+</html>
