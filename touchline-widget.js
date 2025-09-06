@@ -659,17 +659,148 @@
         
         // Add message to chat
         function addMessage(text, type = 'bot') {
+            // Process text to convert markdown tables to HTML
+            const processedText = type === 'bot' ? formatMarkdownTables(text) : text;
+            
             const messageHTML = `
                 <div class="widget-message ${type}-message">
                     <div class="message-avatar">${type === 'user' ? '👤' : '🤖'}</div>
                     <div class="message-content">
-                        <div class="message-text">${text}</div>
+                        <div class="message-text">${processedText}</div>
                     </div>
                 </div>
             `;
             
             messages.insertAdjacentHTML('beforeend', messageHTML);
             scrollToBottom();
+        }
+        
+        // Convert markdown-style tables to HTML tables
+        function formatMarkdownTables(text) {
+            // First try to handle proper markdown tables
+            const tablePattern = /(\|[^|\n]+)+\|[\s]*\n(\|[\s]*:?-+:?[\s]*)+\|[\s]*\n((\|[^|\n]*)+\|[\s]*\n?)*/g;
+            
+            let processedText = text.replace(tablePattern, (match) => {
+                const lines = match.trim().split('\n');
+                if (lines.length < 3) return match;
+                
+                const headerLine = lines[0];
+                const dataLines = lines.slice(2);
+                
+                const headers = headerLine.split('|').map(h => h.trim()).filter(h => h !== '');
+                const rows = dataLines.map(line => 
+                    line.split('|').map(cell => cell.trim()).filter(cell => cell !== '')
+                ).filter(row => row.length > 0);
+                
+                let html = '<table>';
+                
+                if (headers.length > 0) {
+                    html += '<thead><tr>';
+                    headers.forEach(header => {
+                        html += `<th>${header}</th>`;
+                    });
+                    html += '</tr></thead>';
+                }
+                
+                if (rows.length > 0) {
+                    html += '<tbody>';
+                    rows.forEach(row => {
+                        html += '<tr>';
+                        row.forEach((cell, index) => {
+                            if (index < headers.length) {
+                                html += `<td>${cell}</td>`;
+                            }
+                        });
+                        html += '</tr>';
+                    });
+                    html += '</tbody>';
+                }
+                
+                html += '</table>';
+                return html;
+            });
+            
+            // Handle simpler pipe-separated format (like in your screenshot)
+            const simplePipePattern = /(\|[^|\n]+)+\|/g;
+            const lines = processedText.split('\n');
+            
+            // Look for consecutive lines with pipe separators
+            let tableStart = -1;
+            const tableLines = [];
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.includes('|') && line.split('|').length > 3) {
+                    if (tableStart === -1) tableStart = i;
+                    tableLines.push(line);
+                } else if (tableStart !== -1) {
+                    // End of table found
+                    if (tableLines.length >= 2) {
+                        const tableHtml = convertPipeTableToHtml(tableLines);
+                        // Replace the table lines with HTML
+                        lines.splice(tableStart, tableLines.length, tableHtml);
+                        i = tableStart; // Reset index
+                    }
+                    tableStart = -1;
+                    tableLines.length = 0;
+                }
+            }
+            
+            // Handle table at end of text
+            if (tableStart !== -1 && tableLines.length >= 2) {
+                const tableHtml = convertPipeTableToHtml(tableLines);
+                lines.splice(tableStart, tableLines.length, tableHtml);
+            }
+            
+            return lines.join('\n');
+        }
+        
+        // Convert simple pipe-separated lines to HTML table
+        function convertPipeTableToHtml(tableLines) {
+            if (tableLines.length < 2) return tableLines.join('\n');
+            
+            // Filter out separator lines (lines with mostly dashes)
+            const dataLines = tableLines.filter(line => !line.match(/^\|[\s\-|]+\|$/));
+            
+            if (dataLines.length < 1) return tableLines.join('\n');
+            
+            // First non-separator line is header
+            const headerLine = dataLines[0];
+            const dataRows = dataLines.slice(1);
+            
+            const headers = headerLine.split('|').map(h => h.trim()).filter(h => h !== '');
+            
+            let html = '<table>';
+            
+            // Add header
+            if (headers.length > 0) {
+                html += '<thead><tr>';
+                headers.forEach(header => {
+                    html += `<th>${header}</th>`;
+                });
+                html += '</tr></thead>';
+            }
+            
+            // Add data rows
+            if (dataRows.length > 0) {
+                html += '<tbody>';
+                dataRows.forEach(rowLine => {
+                    const cells = rowLine.split('|').map(cell => cell.trim()).filter(cell => cell !== '');
+                    if (cells.length > 0) {
+                        html += '<tr>';
+                        cells.forEach((cell, index) => {
+                            if (index < headers.length) {
+                                html += `<td>${cell}</td>`;
+                            }
+                        });
+                        html += '</tr>';
+                    }
+                });
+                html += '</tbody>';
+            }
+            
+            html += '</table>';
+            return html;
         }
         
         // Scroll to bottom
