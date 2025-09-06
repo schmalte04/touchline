@@ -40,49 +40,6 @@
             z-index: 1000;
         }
         
-        .demo-banner {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            pointer-events: auto;
-            z-index: 1001;
-            animation: slideDown 0.5s ease-out;
-        }
-        
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-        
-        .demo-banner .close-btn {
-            background: none;
-            border: none;
-            color: white;
-            margin-left: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            opacity: 0.8;
-            transition: opacity 0.2s;
-        }
-        
-        .demo-banner .close-btn:hover {
-            opacity: 1;
-        }
-        
         .demo-pointer {
             position: fixed;
             bottom: 100px;
@@ -319,12 +276,6 @@
         
         <!-- Demo Overlay -->
         <div class="demo-overlay">
-            <!-- Demo Banner -->
-            <div class="demo-banner" id="demoBanner">
-                🎯 <strong>Touchline AI Integration Demo</strong> - Chatbot läuft über der echten Turboscores Website
-                <button class="close-btn" onclick="closeBanner()">&times;</button>
-            </div>
-            
             <!-- Demo Pointer -->
             <div class="demo-pointer" id="demoPointer">
                 KI-Chat aktiv! 🎯
@@ -387,14 +338,6 @@
             }
         }
         
-        function closeBanner() {
-            const banner = document.getElementById('demoBanner');
-            if (banner) {
-                banner.classList.add('fade-out');
-                setTimeout(() => banner.remove(), 500);
-            }
-        }
-        
         // Hide pointer after 15 seconds or when widget is clicked
         setTimeout(hidePointer, 8000); // Shorter time since chat opens automatically
         
@@ -403,13 +346,6 @@
             if (e.target.closest('.touchline-widget') && !interactionStarted) {
                 interactionStarted = true;
                 hidePointer();
-                
-                // Hide banner after first interaction
-                setTimeout(() => {
-                    if (document.getElementById('demoBanner')) {
-                        closeBanner();
-                    }
-                }, 3000);
             }
         });
         
