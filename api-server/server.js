@@ -711,7 +711,9 @@ How are you doing today? Are you ready to build some winning accumulator bets? ð
             try {
                 const conversationalPrompt = `You are an expert football betting analyst and assistant. The user asked: "${userQuery}"
 
-This is a conversational question, not about football matches or betting. Respond naturally and helpfully as a betting assistant would. Keep it friendly and professional.`;
+This is a conversational question, not about football matches or betting. Respond naturally and helpfully as a betting assistant would. Keep it friendly and professional.
+
+IMPORTANT: Never provide stake recommendations, bankroll management advice, or suggest specific betting amounts or percentages.`;
 
                 const response = await anthropic.messages.create({
                     model: "claude-3-haiku-20240307",
@@ -912,6 +914,25 @@ IMPORTANT: Inform the user that you found ${uniqueMatches.length} demo matches b
             // Full analysis when real matches are found
             prompt = `You are an expert football betting analyst with access to live MySQL database data.
 
+IMPORTANT RESTRICTIONS - DO NOT:
+- Make specific stake recommendations (e.g., "Limit stakes to 1-2% of bankroll")
+- Suggest specific betting amounts or percentages of bankroll
+- Give bankroll management advice
+- Recommend how much money to wager
+- Use phrases like "stake 1% of your bankroll" or similar
+
+
+
+
+FOCUS ON:
+- Match analysis and predictions
+- Odds value assessment
+- Team form and statistics
+- Match outcome probabilities
+- Risk assessment for bets
+- Bookmaker suggestions
+- Engage the user with insightful betting advice so its entertaining and informative
+
 DATABASE SCHEMA CONTEXT (Rawdata_Total table):
 Core Match Data:
 - MATCH_ID: Unique match identifier
@@ -949,8 +970,6 @@ User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-IMPORTANT: Start your response by mentioning that you found ${uniqueMatches.length} matches in the Rawdata_Total database table${notStartedMatches > 0 ? ` (${notStartedMatches} not started)` : ''}. 
-
 ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
 
 | Date | Time | Match | Home | Draw | Away |
@@ -967,6 +986,13 @@ Rules:
 - Include all matches from the provided data
 
 Then provide brief analysis and recommendations.
+
+BETTING GUIDELINES:
+- Focus on match analysis, team form, and value in odds
+- Assess risk levels (low/medium/high risk)
+- Never suggest specific stake amounts or bankroll percentages
+- Do not provide bankroll management advice
+- Avoid phrases like "stake 1% of bankroll" or similar
 
 IMPORTANT: When making betting recommendations, END your response with bookmaker suggestions like:
 "You can place this bet on "Bet365", "Tipico", "Betway", or "William Hill" for the best odds."
