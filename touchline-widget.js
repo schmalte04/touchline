@@ -1,6 +1,100 @@
 (function() {
     'use strict';
     
+    // Markdown parser loading and initialization
+    let marked = null;
+    let markedLoaded = false;
+    
+    // Load marked.js library dynamically
+    function loadMarkedJS() {
+        return new Promise((resolve, reject) => {
+            if (markedLoaded && window.marked) {
+                marked = window.marked;
+                resolve();
+                return;
+            }
+            
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+            script.onload = () => {
+                marked = window.marked;
+                markedLoaded = true;
+                console.log('✅ Marked.js loaded successfully');
+                resolve();
+            };
+            script.onerror = () => {
+                console.warn('⚠️ Failed to load marked.js, using fallback parser');
+                reject();
+            };
+            document.head.appendChild(script);
+        });
+    }
+    
+    // Enhanced markdown parser with table support
+    function parseMarkdown(text) {
+        if (!marked) {
+            console.log('📝 Using fallback markdown parser');
+            return parseMarkdownFallback(text);
+        }
+        
+        try {
+            // Configure marked for better table rendering
+            marked.setOptions({
+                gfm: true,
+                tables: true,
+                breaks: true,
+                smartLists: true,
+                smartypants: false,
+                renderer: new marked.Renderer()
+            });
+            
+            // Custom table renderer for professional styling
+            const renderer = new marked.Renderer();
+            renderer.table = function(header, body) {
+                return `<div class="professional-table-container">
+                    <table class="professional-table">
+                        <thead>${header}</thead>
+                        <tbody>${body}</tbody>
+                    </table>
+                </div>`;
+            };
+            
+            marked.setOptions({ renderer });
+            
+            const html = marked.parse(text);
+            console.log('✅ Markdown parsed successfully with marked.js');
+            return html;
+        } catch (error) {
+            console.warn('⚠️ Marked.js parsing failed, using fallback:', error);
+            return parseMarkdownFallback(text);
+        }
+    }
+    
+    // Fallback markdown parser for basic formatting
+    function parseMarkdownFallback(text) {
+        console.log('🔄 Using fallback markdown parser');
+        
+        let html = text;
+        
+        // Handle tables first (preserve existing logic)
+        html = smartTableDetection(html);
+        
+        // Basic markdown formatting
+        html = html
+            // Bold text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            // Italic text
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            // Code blocks
+            .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+            // Inline code
+            .replace(/`(.*?)`/g, '<code>$1</code>')
+            // Line breaks
+            .replace(/\n/g, '<br>');
+            
+        return html;
+    }
+
     // Configuration
     const config = window.TouchlineConfig || {};
     const position = config.position || 'bottom-right';
@@ -768,6 +862,66 @@
                 justify-content: center;
             }
         }
+        
+        /* Professional table styles for markdown tables */
+        .professional-table-container {
+            margin: 12px 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .professional-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            background: white;
+        }
+        
+        .professional-table thead {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        }
+        
+        .professional-table th {
+            padding: 8px 10px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .professional-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #f1f3f4;
+            color: #212529;
+            font-size: 11px;
+        }
+        
+        .professional-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .professional-table tbody tr:hover {
+            background-color: #e3f2fd;
+        }
+        
+        /* Mobile adjustments for professional tables */
+        @media (max-width: 520px) {
+            .professional-table {
+                font-size: 9px;
+            }
+            
+            .professional-table th,
+            .professional-table td {
+                padding: 3px 4px;
+                font-size: 9px;
+                max-width: 50px;
+                word-break: break-word;
+            }
+        }
     `;
     
     // Initialize widget
@@ -791,6 +945,11 @@
         const sendBtn = document.getElementById('touchline-send');
         const messages = document.getElementById('touchline-messages');
         const typing = document.getElementById('touchline-typing');
+        
+        // Initialize markdown parser (load asynchronously)
+        loadMarkedJS().catch(() => {
+            console.log('📝 Using fallback markdown parser');
+        });
         
         // State
         let isExpanded = false;
@@ -922,15 +1081,21 @@
         
         // Add message to chat
         function addMessage(text, type = 'bot') {
-            // Process text to convert markdown tables to HTML
+            // Process text for markdown and tables
             let processedText = text;
             if (type === 'bot') {
-                console.log('🚀 Processing bot message for tables...');
+                console.log('🚀 Processing bot message...');
                 console.log('🔍 Original text:', text);
                 
-                // Only process if it looks like actual tabular data
-                processedText = smartTableDetection(text);
-                console.log('� After smart table detection:', processedText);
+                // Use markdown parser (which includes smart table detection)
+                if (marked) {
+                    processedText = parseMarkdown(text);
+                } else {
+                    // Fallback to existing smart table detection
+                    processedText = smartTableDetection(text);
+                }
+                
+                console.log('✨ After markdown processing:', processedText);
             }
             
             // Create message element
