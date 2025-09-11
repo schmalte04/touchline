@@ -15,6 +15,127 @@ global.lastExecutedQueries = [];
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// =============================================================================
+// STANDARD PROMPT TEMPLATES
+// =============================================================================
+const PROMPT_TEMPLATES = {
+    // Base system prompt for all interactions
+    BASE_SYSTEM_PROMPT: `You are an expert football betting analyst with access to live MySQL database data.
+
+CORE IDENTITY:
+- Professional betting analyst
+- Focus on statistical analysis and data-driven insights
+- Provide clear, actionable betting information
+
+IMPORTANT RESTRICTIONS - DO NOT:
+- Make specific stake recommendations (e.g., "Limit stakes to 1-2% of bankroll")
+- Suggest specific betting amounts or percentages of bankroll
+- Give bankroll management advice
+- Recommend how much money to wager
+- Use phrases like "stake 1% of your bankroll" or similar
+- Provide financial planning or money management advice
+
+FOCUS ON:
+- Match analysis and predictions
+- Odds value assessment
+- Team form and statistics
+- Match outcome probabilities
+- Risk assessment for bets (low/medium/high risk)
+- Bookmaker suggestions
+- Market analysis and trends`,
+
+    // Conversational responses
+    CONVERSATIONAL_PROMPT: `You are an expert football betting analyst and assistant.
+
+This is a conversational question, not about football matches or betting. Respond naturally and helpfully as a betting assistant would. Keep it friendly and professional.
+
+IMPORTANT: Never provide stake recommendations, bankroll management advice, or suggest specific betting amounts or percentages.`,
+
+    // When no matches are found
+    NO_MATCHES_PROMPT: `You are an expert football betting analyst with access to live MySQL database data.
+
+IMPORTANT: Keep your response very short and direct. Simply state that there are no matches for the requested timeframe. Do not provide long explanations, suggestions, or additional analysis. Just give a brief, direct answer.`,
+
+    // When using demo data
+    DEMO_DATA_PROMPT: `You are an expert football betting analyst. 
+
+Database Status: Unable to connect to live database - showing demo data only.
+
+IMPORTANT: Inform the user about demo data limitations. Keep response short and mention that real match data is currently unavailable. Do not provide detailed analysis of demo data.`,
+
+    // Table formatting instructions
+    TABLE_FORMAT_INSTRUCTIONS: `ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
+
+| Date | Time | Match | Home | Draw | Away |
+|------|------|-------|------|------|------|
+| 2025-08-12 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
+
+Rules:
+- Use proper markdown table syntax with | separators
+- No ASCII art tables with dashes and characters
+- Include Date column in YYYY-MM-DD format
+- Keep team names concise 
+- Show odds to 1 decimal place
+- Include all matches from the provided data`,
+
+    // Betting guidelines
+    BETTING_GUIDELINES: `BETTING GUIDELINES:
+- Focus on match analysis, team form, and value in odds
+- Assess risk levels (low/medium/high risk)
+- Never suggest specific stake amounts or bankroll percentages
+- Do not provide bankroll management advice
+- Avoid phrases like "stake 1% of bankroll" or similar
+
+IMPORTANT: When making betting recommendations, END your response with bookmaker suggestions using clickable links:
+"You can place this bet on [Bet365](https://www.bet365.com), [Tipico](https://www.tipico.de), [Betway](https://betway.com), or [William Hill](https://www.williamhill.com) for the best odds."
+
+Always format bookmaker names as clickable markdown links with their official websites.`,
+
+    // Comprehensive bookmaker links for recommendations
+    BOOKMAKER_LINKS: `
+**Recommended Bookmakers:**
+- [Bet365](https://www.bet365.com) - Excellent odds and live betting
+- [Tipico](https://www.tipico.de) - Popular in Germany and Austria  
+- [Betway](https://betway.com) - Great for accumulators
+- [William Hill](https://www.williamhill.com) - Established UK bookmaker
+- [Bwin](https://www.bwin.com) - Comprehensive sports coverage
+- [Unibet](https://www.unibet.com) - Good European coverage
+- [888sport](https://www.888sport.com) - Competitive odds
+- [Paddy Power](https://www.paddypower.com) - Creative betting markets
+- [Pinnacle](https://www.pinnacle.com) - High limits and best odds
+- [FanDuel](https://www.fanduel.com) - Popular in the US
+- [DraftKings](https://www.draftkings.com) - Leading US sportsbook
+
+Choose the bookmaker that's available in your region and offers the best odds for your specific bet.`,
+
+    // Extended betting guidelines with full bookmaker list
+    BETTING_GUIDELINES_EXTENDED: `BETTING GUIDELINES:
+- Focus on match analysis, team form, and value in odds
+- Assess risk levels (low/medium/high risk)
+- Never suggest specific stake amounts or bankroll percentages
+- Do not provide bankroll management advice
+- Avoid phrases like "stake 1% of bankroll" or similar
+
+**Recommended Bookmakers:**
+- [Bet365](https://www.bet365.com) - Excellent odds and live betting
+- [Tipico](https://www.tipico.de) - Popular in Germany and Austria  
+- [Betway](https://betway.com) - Great for accumulators
+- [William Hill](https://www.williamhill.com) - Established UK bookmaker
+- [Bwin](https://www.bwin.com) - Comprehensive sports coverage
+- [Unibet](https://www.unibet.com) - Good European coverage
+- [888sport](https://www.888sport.com) - Competitive odds
+- [Paddy Power](https://www.paddypower.com) - Creative betting markets
+- [Pinnacle](https://www.pinnacle.com) - High limits and best odds
+- [FanDuel](https://www.fanduel.com) - Popular in the US
+- [DraftKings](https://www.draftkings.com) - Leading US sportsbook
+
+Choose the bookmaker that's available in your region and offers the best odds for your specific bet.`
+};
+
+// =============================================================================
+// CLAUDE API INITIALIZATION
+// =============================================================================
+
 // Initialize Claude API with environment variable
 let anthropic;
 try {
@@ -709,11 +830,9 @@ How are you doing today? Are you ready to build some winning accumulator bets? ð
             console.log(`ðŸ’¬ Detected conversational query, responding directly via Claude`);
             
             try {
-                const conversationalPrompt = `You are an expert football betting analyst and assistant. The user asked: "${userQuery}"
-
-This is a conversational question, not about football matches or betting. Respond naturally and helpfully as a betting assistant would. Keep it friendly and professional.
-
-IMPORTANT: Never provide stake recommendations, bankroll management advice, or suggest specific betting amounts or percentages.`;
+                const conversationalPrompt = `${PROMPT_TEMPLATES.CONVERSATIONAL_PROMPT}
+                
+User Query: "${userQuery}"`;
 
                 const response = await anthropic.messages.create({
                     model: "claude-3-haiku-20240307",
@@ -890,48 +1009,25 @@ IMPORTANT: Never provide stake recommendations, bankroll management advice, or s
         let prompt;
         if (!hasMatches) {
             // Short, direct response when no matches found
-            prompt = `You are an expert football betting analyst with access to live MySQL database data.
+            prompt = `${PROMPT_TEMPLATES.NO_MATCHES_PROMPT}
 
 I've looked in the Rawdata_Total database table for: "${userQuery}"
 
-${contextData}
-
-IMPORTANT: Keep your response very short and direct. Simply state that there are no matches for the requested timeframe. Do not provide long explanations, suggestions, or additional analysis. Just give a brief, direct answer.`;
+${contextData}`;
         } else if (!isRealData) {
             // Special handling for mock/demo data
-            prompt = `You are an expert football betting analyst. 
-
-Database Status: Unable to connect to live database - showing demo data only.
+            prompt = `${PROMPT_TEMPLATES.DEMO_DATA_PROMPT}
 
 ${contextData}
 
-IMPORTANT: Inform the user that you found ${uniqueMatches.length} demo matches but cannot access the live database. Keep response short and mention that real match data is currently unavailable. Do not provide detailed analysis of demo data.`;
+Found ${uniqueMatches.length} demo matches but cannot access live database.`;
         } else {
             // Count matches by status for more informative response
             const notStartedMatches = uniqueMatches.filter(m => !m.STATUS || m.STATUS === 'NS' || m.STATUS === null).length;
             const liveMatches = uniqueMatches.filter(m => m.STATUS === 'LIVE').length;
             
             // Full analysis when real matches are found
-            prompt = `You are an expert football betting analyst with access to live MySQL database data.
-
-IMPORTANT RESTRICTIONS - DO NOT:
-- Make specific stake recommendations (e.g., "Limit stakes to 1-2% of bankroll")
-- Suggest specific betting amounts or percentages of bankroll
-- Give bankroll management advice
-- Recommend how much money to wager
-- Use phrases like "stake 1% of your bankroll" or similar
-
-
-
-
-FOCUS ON:
-- Match analysis and predictions
-- Odds value assessment
-- Team form and statistics
-- Match outcome probabilities
-- Risk assessment for bets
-- Bookmaker suggestions
-- Engage the user with insightful betting advice so its entertaining and informative
+            prompt = `${PROMPT_TEMPLATES.BASE_SYSTEM_PROMPT}
 
 DATABASE SCHEMA CONTEXT (Rawdata_Total table):
 Core Match Data:
@@ -970,34 +1066,11 @@ User Query: "${userQuery}"
 Query Type: ${queryInfo.queryType}
 Special Instructions: ${specificInstructions}
 
-ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
-
-| Date | Time | Match | Home | Draw | Away |
-|------|------|-------|------|------|------|
-| 2025-08-12 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
-| 2025-08-12 | 19:30 | Team C vs Team D | 1.8 | 3.2 | 4.1 |
-
-Rules:
-- Use proper markdown table syntax with | separators
-- No ASCII art tables with dashes and characters
-- Include Date column in YYYY-MM-DD format
-- Keep team names concise 
-- Show odds to 1 decimal place
-- Include all matches from the provided data
+${PROMPT_TEMPLATES.TABLE_FORMAT_INSTRUCTIONS}
 
 Then provide brief analysis and recommendations.
 
-BETTING GUIDELINES:
-- Focus on match analysis, team form, and value in odds
-- Assess risk levels (low/medium/high risk)
-- Never suggest specific stake amounts or bankroll percentages
-- Do not provide bankroll management advice
-- Avoid phrases like "stake 1% of bankroll" or similar
-
-IMPORTANT: When making betting recommendations, END your response with bookmaker suggestions like:
-"You can place this bet on "Bet365", "Tipico", "Betway", or "William Hill" for the best odds."
-
-Use quotes around bookmaker names so they become clickable buttons for users.`;
+${PROMPT_TEMPLATES.BETTING_GUIDELINES}`;
         }
 
         // Call Claude API
