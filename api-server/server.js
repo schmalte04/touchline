@@ -63,21 +63,6 @@ Database Status: Unable to connect to live database - showing demo data only.
 
 IMPORTANT: Inform the user about demo data limitations. Keep response short and mention that real match data is currently unavailable. Do not provide detailed analysis of demo data.`,
 
-    // Table formatting instructions
-    TABLE_FORMAT_INSTRUCTIONS: `ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
-
-| Date | Time | Match | Home | Draw | Away |
-|------|------|-------|------|------|------|
-| 2025-08-12 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
-
-Rules:
-- Use proper markdown table syntax with | separators
-- No ASCII art tables with dashes and characters
-- Include Date column in YYYY-MM-DD format
-- Keep team names concise 
-- Show odds to 1 decimal place
-- Include all matches from the provided data`,
-
     // Betting guidelines
     BETTING_GUIDELINES: `BETTING GUIDELINES:
 - Focus on match analysis, team form, and value in odds
@@ -129,7 +114,108 @@ Choose the bookmaker that's available in your region and offers the best odds fo
 - [FanDuel](https://www.fanduel.com) - Popular in the US
 - [DraftKings](https://www.draftkings.com) - Leading US sportsbook
 
-Choose the bookmaker that's available in your region and offers the best odds for your specific bet.`
+Choose the bookmaker that's available in your region and offers the best odds for your specific bet.`,
+
+    // Comprehensive database context with league codes and structure
+    DATABASE_CONTEXT: `DATABASE SCHEMA CONTEXT (Rawdata_Total table):
+
+Core Match Data:
+- MATCH_ID: Unique match identifier
+- Home/Away: Team names
+- Date/Time: Match date and kickoff time (format: YYYY-MM-DD HH:MM)
+- League: Competition name with shortcodes
+- Country: Country of the league
+- STATUS: 'FT' = Full Time (completed), 'NS' = Not Started, 'LIVE' = In Progress
+
+LEAGUE SHORTCODES & MAPPINGS:
+European Top Leagues:
+- D1 = German Bundesliga (Germany)
+- E0 = English Premier League (England)
+- E1 = English Championship (England)
+- E2 = English League One (England)
+- E3 = English League Two (England)
+- League Two = English 
+- SP1 = Spanish La Liga (Spain)
+- SP2 = Spanish Segunda División (Spain)
+- I1 = Italian Serie A (Italy)
+- I2 = Italian Serie B (Italy)
+- F1 = French Ligue 1 (France)
+- F2 = French Ligue 2 (France)
+- N1 = Dutch Eredivisie (Netherlands)
+- B1 = Belgian First Division A (Belgium)
+- P1 = Portuguese Primeira Liga (Portugal)
+- T1 = Turkish Süper Lig (Turkey)
+- G1 = Greek Super League (Greece)
+
+Other Major Leagues:
+- SC0 = Scottish Premier League (Scotland)
+- SC1 = Scottish Championship (Scotland)
+- ARG = Argentine Primera División (Argentina)
+- BRA = Brazilian Série A (Brazil)
+- Liga MX = Mexican Liga MX (Mexico)
+- MLS = Major League Soccer (USA)
+- J-League = Japanese J1 League (Japan)
+- AUS = Australian A-League (Australia)
+
+Scores & Results:
+- HG/AG: Home/Away goals (final scores for completed matches)
+- Score_Home/Score_Away: Predicted scores based on team performance metrics
+- FTHG/FTAG: Full-time home/away goals
+- HTHG/HTAG: Half-time home/away goals
+
+Betting Odds (Decimal Format):
+- PH/PD/PA: Pinnacle odds for Home Win/Draw/Away Win
+- B365_H/B365_D/B365_A: Bet365 odds for Home/Draw/Away
+- BW_H/BW_D/BW_A: Betway odds for Home/Draw/Away
+- IW_H/IW_D/IW_A: Interwetten odds
+- PS_H/PS_D/PS_A: Pinnacle odds
+- WH_H/WH_D/WH_A: William Hill odds
+- VC_H/VC_D/VC_A: VC Bet odds
+- Under2.5/Over2.5: Total goals market odds
+- AH_-0.5/AH_0.5: Asian Handicap odds
+
+Performance Metrics:
+- ELO_Home/ELO_Away: Team ELO ratings (strength indicators, range ~1200-2000)
+- ELO_prob: Win probability based on ELO ratings (0-1 scale)
+- xG/xG_Away: Expected Goals (quality of scoring chances, range 0.0-5.0)
+- HS_Target/AS_Target: Average shots on target (last 10 matches)
+- HS/AS: Total shots home/away
+- HST/AST: Shots on target home/away
+- HC/AC: Corners home/away
+- HF/AF: Fouls home/away
+- HY/AY: Yellow cards home/away
+- HR/AR: Red cards home/away
+
+Advanced Analytics:
+- p1_skell/px_skell/p2_skell: Skellam distribution probabilities (Home/Draw/Away)
+- Conversion rates, entropy measures, and form indicators
+- Team form metrics and recent performance data
+
+IMPORTANT NOTES:
+- League field contains the shortcode (e.g., "D1", "E0") not the full name
+- To find Bundesliga matches, search for League = "D1"
+- To find Premier League matches, search for League = "E0" 
+- Country field contains the full country name
+- Use LIKE operator for flexible team name searches
+- Date format is YYYY-MM-DD for consistent filtering`,
+
+    // Table formatting instructions
+    TABLE_FORMAT_INSTRUCTIONS: `ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
+
+| Date | Time | Match | Home | Draw | Away |
+|------|------|-------|------|------|------|
+| 2025-08-12 | 19:00 | Team A vs Team B | 2.1 | 3.4 | 3.8 |
+| 2025-08-12 | 19:30 | Team C vs Team D | 1.8 | 3.2 | 4.1 |
+
+Rules:
+- Use proper markdown table syntax with | separators
+- No ASCII art tables with dashes and characters
+- Include Date column in YYYY-MM-DD format
+- Keep team names concise 
+- Show odds to 1 decimal place
+- Include all matches from the provided data
+
+Then provide brief analysis and recommendations.`
 };
 
 // =============================================================================
@@ -1029,33 +1115,7 @@ Found ${uniqueMatches.length} demo matches but cannot access live database.`;
             // Full analysis when real matches are found
             prompt = `${PROMPT_TEMPLATES.BASE_SYSTEM_PROMPT}
 
-DATABASE SCHEMA CONTEXT (Rawdata_Total table):
-Core Match Data:
-- MATCH_ID: Unique match identifier
-- Home/Away: Team names
-- Date/Time: Match date and kickoff time
-- League: Competition name
-- STATUS: 'FT' = Full Time (completed), 'NS' = Not Started, 'LIVE' = In Progress
-
-Scores & Results:
-- HG/AG: Home/Away goals (final scores)
-- Score_Home/Score_Away: Predicted scores based on team performance metrics
-
-Betting Odds:
-- PH/PD/PA: Pinnacle odds for Home Win/Draw/Away Win
-- B365_H/B365_D/B365_A: Bet365 odds
-- Under2.5/Over2.5: Total goals market odds
-
-Performance Metrics:
-- ELO_Home/ELO_Away: Team ELO ratings (strength indicators, range ~1200-2000)
-- xG/xG_Away: Expected Goals (quality of scoring chances, range 0.0-5.0)
-- HS_Target/AS_Target: Average shots on target (last 10 matches)
-- Score_Home/Score_Away: Expected goals based on recent form
-
-Advanced Analytics:
-- ELO_prob: Win probability based on ELO ratings
-- p1_skell/px_skell/p2_skell: Skellam distribution probabilities (Home/Draw/Away)
-- Conversion rates, entropy measures, and form indicators
+${PROMPT_TEMPLATES.DATABASE_CONTEXT}
 
 CURRENT DATA:
 ${contextData}
