@@ -181,7 +181,6 @@ Performance Metrics:
 - HS_Target/AS_Target: Average shots on target (last 10 matches)
 - HS/AS: Total shots home/away
 - HST/AST: Shots on target home/away
-- HC/AC: Corners home/away
 - HF/AF: Fouls home/away
 - HY/AY: Yellow cards home/away
 - HR/AR: Red cards home/away
@@ -197,7 +196,9 @@ IMPORTANT NOTES:
 - To find Premier League matches, search for League = "E0" 
 - Country field contains the full country name
 - Use LIKE operator for flexible team name searches
-- Date format is YYYY-MM-DD for consistent filtering`,
+- Date format is YYYY-MM-DD for consistent filtering
+- Time format is HH:MM (CEST), so if someone from UK is asking you need to convert it`,
+
 
     // Table formatting instructions
     TABLE_FORMAT_INSTRUCTIONS: `ALWAYS present match data using proper markdown table format (not ASCII art). Use this EXACT format:
@@ -217,6 +218,89 @@ Rules:
 
 Then provide brief analysis and recommendations.`
 };
+
+// =============================================================================
+// HELPER FUNCTIONS FOR QUERY PROCESSING
+// =============================================================================
+
+// Map league names to database shortcodes
+function mapLeagueToShortcode(leagueName) {
+    const leagueMapping = {
+        'Bundesliga': 'D1',
+        'German Bundesliga': 'D1',
+        'Premier League': 'E0',
+        'English Premier League': 'E0',
+        'EPL': 'E0',
+        'Championship': 'E1',
+        'English Championship': 'E1',
+        'League One': 'E2',
+        'English League One': 'E2',
+        'League Two': 'E3',
+        'English League Two': 'E3',
+        'La Liga': 'SP1',
+        'Spanish La Liga': 'SP1',
+        'Primera División': 'SP1',
+        'Segunda División': 'SP2',
+        'Serie A': 'I1',
+        'Italian Serie A': 'I1',
+        'Serie B': 'I2',
+        'Italian Serie B': 'I2',
+        'Ligue 1': 'F1',
+        'French Ligue 1': 'F1',
+        'Ligue 2': 'F2',
+        'French Ligue 2': 'F2',
+        'Eredivisie': 'N1',
+        'Dutch Eredivisie': 'N1',
+        'Belgian First Division A': 'B1',
+        'Primeira Liga': 'P1',
+        'Portuguese Primeira Liga': 'P1',
+        'Süper Lig': 'T1',
+        'Turkish Süper Lig': 'T1',
+        'Super League': 'G1',
+        'Greek Super League': 'G1',
+        'Scottish Premier League': 'SC0',
+        'Scottish Championship': 'SC1',
+        'MLS': 'USA',
+        'Major League Soccer': 'USA'
+    };
+    
+    return leagueMapping[leagueName] || leagueName;
+}
+
+// Calculate weekend date range (Saturday and Sunday)
+function getWeekendDateRange() {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    let saturday, sunday;
+    
+    if (dayOfWeek === 0) {
+        // It's Sunday, get this Sunday and next Saturday
+        sunday = new Date(today);
+        saturday = new Date(today);
+        saturday.setDate(today.getDate() + 6);
+    } else if (dayOfWeek === 6) {
+        // It's Saturday, get today and tomorrow (Sunday)
+        saturday = new Date(today);
+        sunday = new Date(today);
+        sunday.setDate(today.getDate() + 1);
+    } else {
+        // It's Monday-Friday, get upcoming weekend
+        const daysUntilSaturday = 6 - dayOfWeek;
+        saturday = new Date(today);
+        saturday.setDate(today.getDate() + daysUntilSaturday);
+        sunday = new Date(saturday);
+        sunday.setDate(saturday.getDate() + 1);
+    }
+    
+    const formatDate = (date) => date.toISOString().split('T')[0]; // YYYY-MM-DD format
+    
+    return {
+        start: formatDate(saturday),
+        end: formatDate(sunday),
+        dates: [formatDate(saturday), formatDate(sunday)]
+    };
+}
 
 // =============================================================================
 // CLAUDE API INITIALIZATION
@@ -403,13 +487,21 @@ async function searchMatchesFlexible(searchParams) {
             conditions.push(teamCondition);
         }
 
-        // League filter - handle special cases for English leagues
+        // League filter - handle league shortcodes properly
         if (league) {
-            if (league === 'Premier League' || league.toLowerCase().includes('english')) {
+            // Map common league names to shortcodes
+            const leagueShortcode = mapLeagueToShortcode(league);
+            console.log(`🏆 League mapping: "${league}" -> "${leagueShortcode}"`);
+            
+            if (leagueShortcode !== league) {
+                // Use exact match for shortcodes
+                conditions.push(`League = ?`);
+                params.push(leagueShortcode);
+            } else if (league === 'Premier League' || league.toLowerCase().includes('english')) {
                 // For English/Premier League, include multiple English competitions
-                conditions.push(`(League LIKE ? OR League LIKE ? OR League LIKE ? OR League LIKE ?)`);
-                params.push('%Premier League%', '%Championship%', '%League One%', '%League Two%');
+                conditions.push(`(League = 'E0' OR League = 'E1' OR League = 'E2' OR League = 'E3')`);
             } else {
+                // Fallback to LIKE search for unmapped leagues
                 conditions.push(`League LIKE ?`);
                 params.push(`%${league}%`);
             }
@@ -422,15 +514,23 @@ async function searchMatchesFlexible(searchParams) {
             console.log(`🌍 Adding country filter: Country = "${country}"`);
         }
 
-        // Date filter
+        // Date filter - handle special date contexts
         if (date) {
             if (date === 'today') {
                 conditions.push(`Date = CURDATE()`);
             } else if (date === 'tomorrow') {
                 conditions.push(`Date = DATE_ADD(CURDATE(), INTERVAL 1 DAY)`);
+            } else if (date === 'weekend') {
+                const weekend = getWeekendDateRange();
+                console.log(`📅 Weekend date range: ${weekend.start} to ${weekend.end}`);
+                conditions.push(`(Date = ? OR Date = ?)`);
+                params.push(weekend.start, weekend.end);
             } else if (date === 'upcoming') {
                 conditions.push(`Date >= CURDATE()`);
+            } else if (date === 'this_week') {
+                conditions.push(`Date >= CURDATE() AND Date <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)`);
             } else {
+                // Specific date
                 conditions.push(`Date = ?`);
                 params.push(date);
             }
@@ -967,7 +1067,7 @@ User Query: "${userQuery}"`;
             // Build search parameters for flexible search
             const searchParams = {
                 team: queryInfo.teams[0],
-                league: queryInfo.leagues[0],
+                league: queryInfo.leagues[0] ? mapLeagueToShortcode(queryInfo.leagues[0]) : undefined,
                 country: queryInfo.countries[0],
                 date: queryInfo.dateContext,
                 operator: queryInfo.operator,
@@ -978,6 +1078,8 @@ User Query: "${userQuery}"`;
             if (queryInfo.specificDate) {
                 searchParams.date = queryInfo.specificDate;
             }
+
+            console.log(`🔍 Flexible search with params:`, searchParams);
 
             const result = await searchMatchesFlexible(searchParams);
             relevantMatches = result.matches;
