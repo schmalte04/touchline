@@ -1333,6 +1333,15 @@ app.get('/turboscores-iframe-demo', (req, res) => {
     }
 });
 
+app.get('/qount-demo', (req, res) => {
+    try {
+        const demoPath = path.join(__dirname, '../qount-demo.html');
+        res.sendFile(demoPath);
+    } catch (error) {
+        res.status(500).send('Demo not available');
+    }
+});
+
 // Original website route
 app.get('/website', (req, res) => {
     try {

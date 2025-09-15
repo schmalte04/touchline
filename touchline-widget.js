@@ -104,6 +104,13 @@
     const zIndex = config.zIndex || 10000;
     const openByDefault = config.openByDefault || false;
     
+    // Branding configuration
+    const branding = config.branding || {};
+    const brandTitle = branding.title || 'Turboscores AI Assistant';
+    const brandSubtitle = branding.subtitle || 'Ask me about betting insights';
+    const brandFooter = branding.footer || 'Powered by <strong>GainR.ai</strong>';
+    const brandIcon = branding.icon || '⚽';
+    
     // Widget HTML template
     const widgetHTML = `
         <div class="touchline-widget ${theme}-theme" data-position="${position}">
@@ -125,10 +132,10 @@
                     </button>
                     <div class="widget-header-content">
                         <div class="widget-title">
-                            <span class="widget-logo">⚽</span>
-                            <span>Turboscores AI Assistant</span>
+                            <span class="widget-logo">${brandIcon}</span>
+                            <span>${brandTitle}</span>
                         </div>
-                        <div class="widget-subtitle">Ask me about betting insights</div>
+                        <div class="widget-subtitle">${brandSubtitle}</div>
                     </div>
                     <button class="widget-close" id="touchline-close">
                         <svg viewBox="0 0 24 24" fill="currentColor">
@@ -179,7 +186,7 @@
                 </div>
                 
                 <div class="widget-footer">
-                    <span>Powered by <strong>GainR.ai</strong></span>
+                    <span>${brandFooter}</span>
                 </div>
             </div>
         </div>
