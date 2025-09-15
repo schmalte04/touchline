@@ -329,10 +329,12 @@ try {
     };
 }
 
-// Middleware
+// Middleware - Allow all origins for widget embedding
 app.use(cors({
-    origin: ['https://claude-betting-assistant-*.ondigitalocean.app', 'http://localhost:3001', 'file://', 'null'],
-    credentials: true
+    origin: true, // Allow all origins for widget embedding
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 app.use(bodyParser.json());
 
