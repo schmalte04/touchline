@@ -118,6 +118,7 @@
             </div>
             
             <div class="widget-chat" id="touchline-chat">
+                <div class="widget-resize-handle" id="touchline-resize-handle"></div>
                 <div class="widget-header">
                     <button class="mobile-collapse-btn" id="mobile-collapse" style="display: none;">
                         <span>‹</span>
@@ -305,6 +306,60 @@
             bottom: 80px;
             right: 0;
             overflow: hidden;
+            min-width: 320px;
+            max-width: 800px;
+        }
+        
+        .widget-resize-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 8px;
+            background: transparent;
+            cursor: ew-resize;
+            z-index: 1000;
+            transition: all 0.2s ease;
+            border-left: 2px solid transparent;
+        }
+        
+        .widget-resize-handle:hover {
+            background: rgba(76, 205, 196, 0.1);
+            border-left-color: rgba(76, 205, 196, 0.6);
+        }
+        
+        .widget-resize-handle::before {
+            content: '⋮⋮';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(90deg);
+            color: rgba(76, 205, 196, 0.4);
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: -2px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        
+        .widget-resize-handle:hover::before {
+            opacity: 1;
+        }
+        
+        .widget-chat.resizing .widget-resize-handle {
+            background: rgba(76, 205, 196, 0.2);
+            border-left-color: #4ECDC4;
+        }
+        
+        .widget-chat.resizing {
+            user-select: none;
+            pointer-events: none;
+        }
+        
+        .widget-chat.resizing * {
+            user-select: none;
+            pointer-events: none;
         }
         
         .touchline-widget[data-position="bottom-left"] .widget-chat,
@@ -921,6 +976,11 @@
                 max-width: 50px;
                 word-break: break-word;
             }
+            
+            /* Hide resize handle on mobile */
+            .widget-resize-handle {
+                display: none;
+            }
         }
     `;
     
@@ -941,6 +1001,7 @@
         const chat = document.getElementById('touchline-chat');
         const closeBtn = document.getElementById('touchline-close');
         const mobileCollapseBtn = document.getElementById('mobile-collapse');
+        const resizeHandle = document.getElementById('touchline-resize-handle');
         const input = document.getElementById('touchline-input');
         const sendBtn = document.getElementById('touchline-send');
         const messages = document.getElementById('touchline-messages');
@@ -1029,6 +1090,48 @@
             isExpanded = false;
             widget.classList.remove('widget-expanded');
         });
+        
+        // Resize functionality
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 480;
+        
+        if (resizeHandle) {
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = chat.offsetWidth;
+                chat.classList.add('resizing');
+                document.body.style.cursor = 'ew-resize';
+                e.preventDefault();
+            });
+            
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                const deltaX = startX - e.clientX; // Negative because we're resizing from the left
+                const newWidth = Math.max(320, Math.min(800, startWidth + deltaX));
+                
+                chat.style.width = `${newWidth}px`;
+            });
+            
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    chat.classList.remove('resizing');
+                    document.body.style.cursor = '';
+                }
+            });
+            
+            // Handle mouse leave to stop resizing
+            document.addEventListener('mouseleave', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    chat.classList.remove('resizing');
+                    document.body.style.cursor = '';
+                }
+            });
+        }
         
         // Open by default if configured
         if (openByDefault) {
