@@ -510,6 +510,54 @@ async function testDatabaseConnection() {
     }
 }
 
+// Create chat_logs table if it doesn't exist
+async function createChatLogsTable() {
+    try {
+        const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS chat_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                ip_address VARCHAR(45) NOT NULL,
+                user_prompt TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                context VARCHAR(255) DEFAULT NULL,
+                response_length INT DEFAULT 0,
+                INDEX idx_timestamp (timestamp),
+                INDEX idx_ip (ip_address)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        `;
+        
+        await pool.execute(createTableQuery);
+        console.log('✅ Chat logs table created/verified successfully');
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to create chat_logs table:', error.message);
+        return false;
+    }
+}
+
+// Log chat interaction to database
+async function logChatInteraction(ipAddress, userPrompt, context = null, responseLength = 0) {
+    try {
+        const insertQuery = `
+            INSERT INTO chat_logs (ip_address, user_prompt, context, response_length)
+            VALUES (?, ?, ?, ?)
+        `;
+        
+        await pool.execute(insertQuery, [
+            ipAddress,
+            userPrompt.substring(0, 2000), // Limit prompt length to prevent issues
+            context,
+            responseLength
+        ]);
+        
+        console.log(`📝 Chat interaction logged for IP: ${ipAddress.substring(0, 10)}...`);
+        return true;
+    } catch (error) {
+        console.error('❌ Failed to log chat interaction:', error.message);
+        return false;
+    }
+}
+
 // Helper function to get upcoming matches from MySQL with precise filtering
 async function getUpcomingMatches(days = 7) {
     try {
@@ -1107,14 +1155,28 @@ app.post('/api/chat', async (req, res) => {
         global.lastExecutedQueries = [];
         
         const { message: userQuery, context } = req.body;
+        
+        // Get client IP address
+        const clientIP = req.headers['x-forwarded-for'] || 
+                        req.headers['x-real-ip'] || 
+                        req.connection.remoteAddress || 
+                        req.socket.remoteAddress ||
+                        (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+                        req.ip ||
+                        'unknown';
+        
         console.log(`💬 User query: ${userQuery}`);
         console.log(`📋 Context: ${context || 'none'}`);
+        console.log(`🌐 Client IP: ${clientIP}`);
 
         // Handle initialization/welcome message
         if (context === 'initialization' || userQuery.toLowerCase().includes('introduce yourself')) {
             const welcomeMessage = `Hello! 👋 I'm your Touchline Betting Assistant.
 
 How are you doing today? Are you ready to build some winning accumulator bets? 🚀`;
+            
+            // Log the interaction
+            await logChatInteraction(clientIP, userQuery, context || 'welcome', welcomeMessage.length);
             
             res.json({
                 success: true,
@@ -1154,6 +1216,9 @@ User Query: "${userQuery}"`;
 
                 const claudeResponse = response.content[0].text;
                 
+                // Log the conversational interaction
+                await logChatInteraction(clientIP, userQuery, context || 'conversational', claudeResponse.length);
+                
                 res.json({
                     success: true,
                     response: claudeResponse,
@@ -1164,9 +1229,14 @@ User Query: "${userQuery}"`;
                 
             } catch (claudeError) {
                 console.error('❌ Claude API error for conversational query:', claudeError);
+                const fallbackResponse = "I'm doing well, thanks for asking! I'm here and ready to help you with football betting analysis and accumulator suggestions. What would you like to explore?";
+                
+                // Log the fallback interaction
+                await logChatInteraction(clientIP, userQuery, context || 'conversational_fallback', fallbackResponse.length);
+                
                 res.json({
                     success: true,
-                    response: "I'm doing well, thanks for asking! I'm here and ready to help you with football betting analysis and accumulator suggestions. What would you like to explore?",
+                    response: fallbackResponse,
                     matchCount: 0,
                     queryInfo: { type: 'conversational_fallback' }
                 });
@@ -1377,6 +1447,14 @@ ${PROMPT_TEMPLATES.BETTING_GUIDELINES}`;
         const claudeResponse = response.content[0].text;
         console.log('✅ Claude response received');
 
+        // Log the chat interaction to database
+        await logChatInteraction(
+            clientIP,
+            userQuery,
+            context || null,
+            claudeResponse.length
+        );
+
         res.json({
             success: true,
             response: claudeResponse,
@@ -1428,6 +1506,121 @@ app.get('/widget/touchline-widget.js', (req, res) => {
     } catch (error) {
         console.error('❌ Widget file error:', error);
         res.status(500).send('// Widget loading error');
+    }
+});
+
+// API endpoint to view chat logs (for debugging)
+app.get('/api/chat-logs', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const offset = parseInt(req.query.offset) || 0;
+        
+        const query = `
+            SELECT id, ip_address, user_prompt, timestamp, context, response_length
+            FROM chat_logs 
+            ORDER BY timestamp DESC 
+            LIMIT ? OFFSET ?
+        `;
+        
+        const [rows] = await pool.execute(query, [limit, offset]);
+        
+        // Get total count
+        const [countRows] = await pool.execute('SELECT COUNT(*) as total FROM chat_logs');
+        const totalCount = countRows[0].total;
+        
+        res.json({
+            success: true,
+            logs: rows,
+            pagination: {
+                total: totalCount,
+                limit: limit,
+                offset: offset,
+                hasMore: (offset + limit) < totalCount
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching chat logs:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// API endpoint to get chat log statistics
+app.get('/api/chat-stats', async (req, res) => {
+    try {
+        const queries = [
+            'SELECT COUNT(*) as total_chats FROM chat_logs',
+            'SELECT COUNT(DISTINCT ip_address) as unique_users FROM chat_logs',
+            'SELECT DATE(timestamp) as date, COUNT(*) as count FROM chat_logs WHERE timestamp >= DATE_SUB(NOW(), INTERVAL 7 DAY) GROUP BY DATE(timestamp) ORDER BY date DESC',
+            'SELECT AVG(response_length) as avg_response_length FROM chat_logs WHERE response_length > 0'
+        ];
+        
+        const [totalChats] = await pool.execute(queries[0]);
+        const [uniqueUsers] = await pool.execute(queries[1]);
+        const [dailyStats] = await pool.execute(queries[2]);
+        const [avgLength] = await pool.execute(queries[3]);
+        
+        res.json({
+            success: true,
+            stats: {
+                totalChats: totalChats[0].total_chats,
+                uniqueUsers: uniqueUsers[0].unique_users,
+                averageResponseLength: Math.round(avgLength[0].avg_response_length || 0),
+                dailyChatsLast7Days: dailyStats
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Error fetching chat stats:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Chat logs admin interface
+app.get('/admin/chat-logs', (req, res) => {
+    try {
+        const adminPath = path.join(__dirname, '../chat-logs-admin.html');
+        res.sendFile(adminPath);
+    } catch (error) {
+        res.status(500).send('Admin interface not available');
+    }
+});
+
+// Admin chat logs dashboard with password protection
+app.get('/admin/chat-logs', (req, res) => {
+    try {
+        const adminPath = path.join(__dirname, '../chat-logs-admin.html');
+        res.sendFile(adminPath);
+    } catch (error) {
+        res.status(500).send('Admin dashboard not available');
+    }
+});
+
+// Admin authentication endpoint
+app.post('/api/admin/login', (req, res) => {
+    try {
+        const { password } = req.body;
+        const adminPassword = 'Kassel-2025';
+        
+        console.log('🔐 Admin login attempt');
+        
+        if (password === adminPassword) {
+            res.json({ success: true, message: 'Admin access granted' });
+        } else {
+            res.json({ success: false, message: 'Invalid admin password' });
+        }
+    } catch (error) {
+        console.error('❌ Admin authentication error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 
@@ -1531,6 +1724,9 @@ app.listen(PORT, async () => {
     const dbConnected = await testDatabaseConnection();
     if (dbConnected) {
         console.log('✅ MySQL database connection verified');
+        
+        // Initialize chat logs table
+        await createChatLogsTable();
     } else {
         console.log('⚠️ MySQL database connection failed - will use fallback data');
     }
