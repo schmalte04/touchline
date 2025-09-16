@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touchline Chat Logs - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .logs-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .logs-header {
+            background: #f8f9fa;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logs-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .logs-table th,
+        .logs-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .logs-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .logs-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .ip-address {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .context-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .context-badge.welcome { background: #28a745; }
+        .context-badge.conversational { background: #17a2b8; }
+        .context-badge.betting { background: #fd7e14; }
+
+        .prompt-text {
+            max-width: 300px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .prompt-text:hover {
+            background: #f8f9fa;
+            padding: 0.25rem;
+            border-radius: 4px;
+        }
+
+        .timestamp {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+
+        /* Login Modal Styles */
+        .modal {
+            display: flex;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-actions {
+            text-align: center;
+        }
+
+        .header {
+            position: relative;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .logs-table {
+                font-size: 0.85rem;
+            }
+            
+            .logs-table th,
+            .logs-table td {
+                padding: 0.5rem;
+            }
+
+            .modal-content {
+                margin: 20px;
+                padding: 1.5rem;
+            }
+
+            .header .btn.secondary {
+                position: static !important;
+                margin-top: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Modal -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <h2>🔐 Admin Access Required</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="adminPassword">Enter Admin Password:</label>
+                        <input type="password" id="adminPassword" class="form-input" placeholder="Admin password" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn">Access Dashboard</button>
+                    </div>
+                </form>
+                <div id="loginError" class="error" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard (hidden until authenticated) -->
+        <div id="dashboard" style="display: none;">
+            <div class="header">
+                <h1>🎯 Touchline Chat Logs</h1>
+                <p>Monitor user interactions and system usage</p>
+                <button class="btn secondary" onclick="logout()" style="position: absolute; top: 1rem; right: 1rem;">Logout</button>
+            </div>
+
+            <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalChats">-</div>
+                <div class="stat-label">Total Chats</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="uniqueUsers">-</div>
+                <div class="stat-label">Unique Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgLength">-</div>
+                <div class="stat-label">Avg Response Length</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="todayChats">-</div>
+                <div class="stat-label">Today's Chats</div>
+            </div>
+        </div>
+
+        <div class="logs-section">
+            <div class="logs-header">
+                <h2>Recent Chat Interactions</h2>
+                <div class="controls">
+                    <button class="btn" onclick="refreshLogs()">🔄 Refresh</button>
+                    <button class="btn secondary" onclick="loadMore()">Load More</button>
+                </div>
+            </div>
+
+            <div id="loadingIndicator" class="loading">Loading chat logs...</div>
+            <div id="errorMessage" class="error" style="display: none;"></div>
+
+            <table class="logs-table" id="logsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>IP Address</th>
+                        <th>User Prompt</th>
+                        <th>Context</th>
+                        <th>Response Length</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                </tbody>
+            </table>
+        </div>
+        </div> <!-- End dashboard div -->
+    </div>
+
+    <script>
+        let currentOffset = 0;
+        const pageSize = 20;
+        let isAuthenticated = false;
+
+        // Check if user is already authenticated
+        function checkAuthentication() {
+            const authToken = localStorage.getItem('touchline_admin_auth');
+            if (authToken === 'authenticated') {
+                isAuthenticated = true;
+                document.getElementById('loginModal').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                return true;
+            }
+            return false;
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('adminPassword').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('touchline_admin_auth', 'authenticated');
+                    isAuthenticated = true;
+                    document.getElementById('loginModal').style.display = 'none';
+                    document.getElementById('dashboard').style.display = 'block';
+                    
+                    // Load data after successful authentication
+                    loadStats();
+                    loadLogs();
+                } else {
+                    errorDiv.textContent = data.message || 'Invalid password';
+                    errorDiv.style.display = 'block';
+                    document.getElementById('adminPassword').value = '';
+                }
+            } catch (error) {
+                errorDiv.textContent = 'Authentication error: ' + error.message;
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Logout function
+        function logout() {
+            localStorage.removeItem('touchline_admin_auth');
+            isAuthenticated = false;
+            document.getElementById('dashboard').style.display = 'none';
+            document.getElementById('loginModal').style.display = 'flex';
+            document.getElementById('adminPassword').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        // Load statistics
+        async function loadStats() {
+            if (!isAuthenticated) return;
+            
+            try {
+                const response = await fetch('/api/chat-stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalChats').textContent = data.stats.totalChats.toLocaleString();
+                    document.getElementById('uniqueUsers').textContent = data.stats.uniqueUsers.toLocaleString();
+                    document.getElementById('avgLength').textContent = data.stats.averageResponseLength + ' chars';
+                    
+                    // Get today's count from daily stats
+                    const todayStats = data.stats.dailyChatsLast7Days.find(day => {
+                        const today = new Date().toISOString().split('T')[0];
+                        return day.date === today;
+                    });
+                    document.getElementById('todayChats').textContent = todayStats ? todayStats.count : '0';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load chat logs
+        async function loadLogs(append = false) {
+            if (!isAuthenticated) return;
+            
+            try {
+                if (!append) {
+                    document.getElementById('loadingIndicator').style.display = 'block';
+                    document.getElementById('logsTable').style.display = 'none';
+                    document.getElementById('errorMessage').style.display = 'none';
+                }
+
+                const response = await fetch(`/api/chat-logs?limit=${pageSize}&offset=${currentOffset}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const tbody = document.getElementById('logsTableBody');
+                    
+                    if (!append) {
+                        tbody.innerHTML = '';
+                        currentOffset = 0;
+                    }
+                    
+                    data.logs.forEach(log => {
+                        const row = document.createElement('tr');
+                        
+                        // Format timestamp
+                        const timestamp = new Date(log.timestamp).toLocaleString();
+                        
+                        // Determine context badge color
+                        let contextClass = 'betting';
+                        if (log.context === 'welcome') contextClass = 'welcome';
+                        else if (log.context === 'conversational' || log.context === 'conversational_fallback') contextClass = 'conversational';
+                        
+                        // Truncate long prompts
+                        const promptText = log.user_prompt.length > 80 
+                            ? log.user_prompt.substring(0, 80) + '...' 
+                            : log.user_prompt;
+                        
+                        row.innerHTML = `
+                            <td class="timestamp">${timestamp}</td>
+                            <td><span class="ip-address">${log.ip_address}</span></td>
+                            <td class="prompt-text" title="${log.user_prompt.replace(/"/g, '&quot;')}">${promptText}</td>
+                            <td><span class="context-badge ${contextClass}">${log.context || 'unknown'}</span></td>
+                            <td>${log.response_length} chars</td>
+                        `;
+                        
+                        tbody.appendChild(row);
+                    });
+                    
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    document.getElementById('logsTable').style.display = 'table';
+                    
+                    if (append) {
+                        currentOffset += pageSize;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to load logs');
+                }
+            } catch (error) {
+                console.error('Error loading logs:', error);
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('errorMessage').textContent = 'Error loading chat logs: ' + error.message;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        // Refresh logs
+        function refreshLogs() {
+            currentOffset = 0;
+            loadLogs(false);
+            loadStats();
+        }
+
+        // Load more logs
+        function loadMore() {
+            currentOffset += pageSize;
+            loadLogs(true);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if already authenticated
+            if (checkAuthentication()) {
+                loadStats();
+                loadLogs();
+                
+                // Auto refresh every 30 seconds
+                setInterval(() => {
+                    if (isAuthenticated) {
+                        loadStats();
+                    }
+                }, 30000);
+            }
+        });
+    </script>
+</body>
+</html>
