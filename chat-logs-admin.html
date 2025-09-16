@@ -19,9 +19,10 @@
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            margin: 0;
             padding: 20px;
+            box-sizing: border-box;
         }
 
         .header {
@@ -65,6 +66,12 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             overflow: hidden;
+        }
+
+        .logs-table-container {
+            overflow-x: auto;
+            max-height: 70vh;
+            overflow-y: auto;
         }
 
         .logs-header {
@@ -327,21 +334,23 @@
             <div id="loadingIndicator" class="loading">Loading chat logs...</div>
             <div id="errorMessage" class="error" style="display: none;"></div>
 
-            <table class="logs-table" id="logsTable" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>IP Address</th>
-                        <th>Source</th>
-                        <th>User Prompt</th>
-                        <th>Claude Response</th>
-                        <th>Context</th>
-                        <th>Response Length</th>
-                    </tr>
-                </thead>
-                <tbody id="logsTableBody">
-                </tbody>
-            </table>
+            <div class="logs-table-container">
+                <table class="logs-table" id="logsTable" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>IP Address</th>
+                            <th>Source</th>
+                            <th>User Prompt</th>
+                            <th>Claude Response</th>
+                            <th>Context</th>
+                            <th>Response Length</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody">
+                    </tbody>
+                </table>
+            </div>
         </div>
         </div> <!-- End dashboard div -->
     </div>

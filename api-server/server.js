@@ -16,6 +16,51 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // =============================================================================
+// COMPANY-SPECIFIC RESPONSES (for minimal-chat-widget only)
+// =============================================================================
+const COMPANY_RESPONSES = {
+    "what was the roi over the last 3 months": "quont.AI provided 4.9% ROI per trade on average over the last 3 months.",
+    "what is your track record": "quont.AI has maintained a consistent 4.9% ROI per trade with over 85% accuracy in our predictions.",
+    "how much money can i make": "Based on our track record, quont.AI delivers an average of 4.9% ROI per trade. However, past performance doesn't guarantee future results.",
+    "what are your results": "Our results show 4.9% average ROI per trade over the past 3 months with high prediction accuracy.",
+    "roi performance": "quont.AI's current performance metrics show 4.9% ROI per trade on average.",
+    "company performance": "quont.AI has delivered consistent 4.9% ROI per trade with reliable betting insights.",
+    // Add more company-specific Q&As here
+};
+
+// Function to check if a query matches company-specific prompts
+function getCompanyResponse(userQuery, source) {
+    // Only respond to company-specific queries from minimal-chat-widget
+    if (source !== 'minimal-chat-widget') {
+        return null;
+    }
+    
+    const lowerQuery = userQuery.toLowerCase().trim();
+    
+    // Check for exact matches first
+    if (COMPANY_RESPONSES[lowerQuery]) {
+        return COMPANY_RESPONSES[lowerQuery];
+    }
+    
+    // Check for partial matches
+    for (const [key, response] of Object.entries(COMPANY_RESPONSES)) {
+        if (lowerQuery.includes(key) || key.includes(lowerQuery)) {
+            return response;
+        }
+    }
+    
+    // Check for keyword matches
+    const roiKeywords = ['roi', 'return', 'profit', 'performance', 'results', 'track record'];
+    const hasRoiKeyword = roiKeywords.some(keyword => lowerQuery.includes(keyword));
+    
+    if (hasRoiKeyword && (lowerQuery.includes('month') || lowerQuery.includes('performance') || lowerQuery.includes('result'))) {
+        return COMPANY_RESPONSES["what was the roi over the last 3 months"];
+    }
+    
+    return null;
+}
+
+// =============================================================================
 // STANDARD PROMPT TEMPLATES
 // =============================================================================
 const PROMPT_TEMPLATES = {
@@ -573,6 +618,26 @@ async function createChatLogsTable() {
 function detectChatSource(req) {
     const referer = req.get('Referer') || req.get('Origin') || '';
     const userAgent = req.get('User-Agent') || '';
+    const context = req.body?.context || '';
+    const widgetSource = req.get('X-Widget-Source') || '';
+    
+    // Check for custom widget headers first (most reliable)
+    if (widgetSource === 'minimal-chat-widget') {
+        return 'minimal-chat-widget';
+    }
+    
+    if (widgetSource === 'touchline-widget') {
+        return 'touchline-widget';
+    }
+    
+    // Check for specific contexts
+    if (context === 'minimal-web-widget') {
+        return 'minimal-chat-widget';
+    }
+    
+    if (context === 'widget') {
+        return 'touchline-widget';
+    }
     
     // Check for specific sources based on referer
     if (referer.includes('lovable.dev') || referer.includes('lovable.ai')) {
@@ -1259,6 +1324,23 @@ app.post('/api/chat', async (req, res) => {
         console.log(`🌐 Client IP: ${clientIP}`);
         console.log(`📍 Source: ${chatSource}`);
 
+        // Check for company-specific responses (minimal-chat-widget only)
+        const companyResponse = getCompanyResponse(userQuery, chatSource);
+        if (companyResponse) {
+            console.log(`🏢 Company-specific response triggered for: ${userQuery}`);
+            
+            // Log the company response interaction
+            await logChatInteraction(clientIP, userQuery, 'company_response', companyResponse.length, companyResponse, chatSource);
+            
+            res.json({
+                success: true,
+                response: companyResponse,
+                matchCount: 0,
+                queryInfo: { type: 'company_response', source: chatSource }
+            });
+            return;
+        }
+
         // Handle initialization/welcome message
         if (context === 'initialization' || userQuery.toLowerCase().includes('introduce yourself')) {
             const welcomeMessage = `Hello! 👋 I'm your Touchline Betting Assistant.
@@ -1694,6 +1776,16 @@ app.get('/admin/chat-logs', (req, res) => {
     }
 });
 
+// Company responses admin interface
+app.get('/admin/company-responses', (req, res) => {
+    try {
+        const adminPath = path.join(__dirname, '../company-responses-admin.html');
+        res.sendFile(adminPath);
+    } catch (error) {
+        res.status(500).send('Company responses admin page not available');
+    }
+});
+
 // Admin authentication endpoint
 app.post('/api/admin/login', (req, res) => {
     try {
@@ -1780,6 +1872,100 @@ app.get('/website', (req, res) => {
         res.sendFile(websitePath);
     } catch (error) {
         res.status(500).send('Website not available');
+    }
+});
+
+// Company responses management endpoints
+app.get('/api/company-responses', (req, res) => {
+    try {
+        res.json({
+            success: true,
+            responses: COMPANY_RESPONSES,
+            count: Object.keys(COMPANY_RESPONSES).length
+        });
+    } catch (error) {
+        console.error('❌ Error getting company responses:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.post('/api/company-responses', (req, res) => {
+    try {
+        const { password, prompt, response } = req.body;
+        const correctPassword = process.env.WEBSITE_PASSWORD || 'Touchline2024!';
+        
+        if (password !== correctPassword) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid password'
+            });
+        }
+        
+        if (!prompt || !response) {
+            return res.status(400).json({
+                success: false,
+                error: 'Both prompt and response are required'
+            });
+        }
+        
+        const normalizedPrompt = prompt.toLowerCase().trim();
+        COMPANY_RESPONSES[normalizedPrompt] = response;
+        
+        console.log(`✅ Added company response: "${normalizedPrompt}" -> "${response}"`);
+        
+        res.json({
+            success: true,
+            message: 'Company response added successfully',
+            prompt: normalizedPrompt,
+            response: response
+        });
+    } catch (error) {
+        console.error('❌ Error adding company response:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+app.delete('/api/company-responses', (req, res) => {
+    try {
+        const { password, prompt } = req.body;
+        const correctPassword = process.env.WEBSITE_PASSWORD || 'Touchline2024!';
+        
+        if (password !== correctPassword) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid password'
+            });
+        }
+        
+        const normalizedPrompt = prompt.toLowerCase().trim();
+        
+        if (COMPANY_RESPONSES[normalizedPrompt]) {
+            delete COMPANY_RESPONSES[normalizedPrompt];
+            console.log(`🗑️ Removed company response: "${normalizedPrompt}"`);
+            
+            res.json({
+                success: true,
+                message: 'Company response removed successfully',
+                prompt: normalizedPrompt
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                error: 'Company response not found'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Error removing company response:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
     }
 });
 

@@ -1414,6 +1414,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'X-Widget-Source': 'touchline-widget'
                     },
                     body: JSON.stringify({
                         message: message,

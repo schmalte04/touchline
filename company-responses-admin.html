@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Company Responses Management</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 600;
+        }
+
+        .section-content {
+            padding: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .btn.danger {
+            background: #e53e3e;
+        }
+
+        .btn.danger:hover {
+            background: #c53030;
+        }
+
+        .response-item {
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+        }
+
+        .response-prompt {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .response-text {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏢 Company Responses Management</h1>
+            <p>Manage company-specific responses for the minimal chat widget</p>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <!-- Add New Response Section -->
+        <div class="section">
+            <div class="section-header">➕ Add New Company Response</div>
+            <div class="section-content">
+                <form id="addResponseForm">
+                    <div class="form-group">
+                        <label for="adminPassword">Admin Password:</label>
+                        <input type="password" id="adminPassword" class="form-input" placeholder="Enter admin password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="promptText">User Prompt/Question:</label>
+                        <input type="text" id="promptText" class="form-input" placeholder="e.g., What was the ROI over the last 3 months?" required>
+                        <small style="color: #666; font-size: 0.9rem;">Enter the question users might ask (case-insensitive)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="responseText">Company Response:</label>
+                        <textarea id="responseText" class="form-textarea" placeholder="e.g., quont.AI provided 4.9% ROI per trade on average over the last 3 months." required></textarea>
+                        <small style="color: #666; font-size: 0.9rem;">This response will only be shown to users of the minimal chat widget</small>
+                    </div>
+                    <button type="submit" class="btn">Add Response</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Current Responses Section -->
+        <div class="section">
+            <div class="section-header">📋 Current Company Responses</div>
+            <div class="section-content">
+                <div id="loadingIndicator" class="loading">Loading company responses...</div>
+                <div id="responsesContainer"></div>
+                <button onclick="loadResponses()" class="btn">🔄 Refresh</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Show message to user
+        function showMessage(text, type = 'success') {
+            const container = document.getElementById('messageContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = text;
+            container.appendChild(messageDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (messageDiv.parentNode) {
+                    messageDiv.parentNode.removeChild(messageDiv);
+                }
+            }, 5000);
+        }
+
+        // Load current responses
+        async function loadResponses() {
+            const container = document.getElementById('responsesContainer');
+            const loading = document.getElementById('loadingIndicator');
+            
+            loading.style.display = 'block';
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch('/api/company-responses');
+                const data = await response.json();
+                
+                loading.style.display = 'none';
+                
+                if (data.success) {
+                    const responses = data.responses;
+                    const count = Object.keys(responses).length;
+                    
+                    if (count === 0) {
+                        container.innerHTML = '<p style="color: #666; text-align: center;">No company responses configured yet.</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = `<p style="margin-bottom: 1rem;"><strong>${count} company response(s) configured:</strong></p>`;
+                    
+                    for (const [prompt, response] of Object.entries(responses)) {
+                        const item = document.createElement('div');
+                        item.className = 'response-item';
+                        item.innerHTML = `
+                            <div class="response-prompt">"${prompt}"</div>
+                            <div class="response-text">${response}</div>
+                            <button onclick="deleteResponse('${prompt.replace(/'/g, "\\'")}', '${document.getElementById('adminPassword').value}')" class="btn danger">🗑️ Delete</button>
+                        `;
+                        container.appendChild(item);
+                    }
+                } else {
+                    container.innerHTML = `<p style="color: red;">Error loading responses: ${data.error}</p>`;
+                }
+            } catch (error) {
+                loading.style.display = 'none';
+                container.innerHTML = `<p style="color: red;">Network error: ${error.message}</p>`;
+            }
+        }
+
+        // Delete a response
+        async function deleteResponse(prompt, password) {
+            if (!password) {
+                showMessage('Please enter admin password first', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete the response for: "${prompt}"?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/company-responses', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password,
+                        prompt: prompt
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(`Response deleted: "${prompt}"`, 'success');
+                    loadResponses();
+                } else {
+                    showMessage(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        }
+
+        // Add new response
+        document.getElementById('addResponseForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('adminPassword').value;
+            const prompt = document.getElementById('promptText').value;
+            const response = document.getElementById('responseText').value;
+            
+            if (!password || !prompt || !response) {
+                showMessage('All fields are required', 'error');
+                return;
+            }
+            
+            try {
+                const apiResponse = await fetch('/api/company-responses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        password: password,
+                        prompt: prompt,
+                        response: response
+                    })
+                });
+                
+                const data = await apiResponse.json();
+                
+                if (data.success) {
+                    showMessage(`Response added successfully for: "${data.prompt}"`, 'success');
+                    document.getElementById('promptText').value = '';
+                    document.getElementById('responseText').value = '';
+                    loadResponses();
+                } else {
+                    showMessage(`Error: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Network error: ${error.message}`, 'error');
+            }
+        });
+
+        // Load responses on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadResponses();
+        });
+    </script>
+</body>
+</html>
