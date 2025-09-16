@@ -1776,6 +1776,16 @@ app.get('/admin/chat-logs', (req, res) => {
     }
 });
 
+// Main admin console
+app.get('/admin', (req, res) => {
+    try {
+        const adminPath = path.join(__dirname, '../admin-console.html');
+        res.sendFile(adminPath);
+    } catch (error) {
+        res.status(500).send('Admin console not available');
+    }
+});
+
 // Company responses admin interface
 app.get('/admin/company-responses', (req, res) => {
     try {

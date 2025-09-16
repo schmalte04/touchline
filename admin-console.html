@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Touchline Admin Console</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 2rem;
+        }
+
+        .admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .admin-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+
+        .admin-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-header {
+            padding: 2rem;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .card-header.logs {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .card-header.company {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        }
+
+        .card-header.health {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            opacity: 0.9;
+            font-size: 1rem;
+        }
+
+        .card-content {
+            padding: 2rem;
+        }
+
+        .card-description {
+            color: #666;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-features li {
+            color: #555;
+            margin-bottom: 0.5rem;
+            padding-left: 1rem;
+            position: relative;
+        }
+
+        .card-features li:before {
+            content: "✓";
+            color: #28a745;
+            font-weight: bold;
+            position: absolute;
+            left: 0;
+        }
+
+        .card-action {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: background 0.3s ease;
+            text-align: center;
+            width: 100%;
+        }
+
+        .card-action:hover {
+            background: #5a67d8;
+            text-decoration: none;
+            color: white;
+        }
+
+        .stats-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 3rem;
+        }
+
+        .footer a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        .login-section {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .login-form {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: #5a67d8;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .admin-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎯 Touchline Admin Console</h1>
+            <p>Complete management dashboard for your football betting assistant</p>
+            <p><strong>Admin Password:</strong> <code>Touchline2024!</code></p>
+        </div>
+
+        <!-- Login Section -->
+        <div id="loginSection" class="login-section">
+            <h2>🔐 Authentication Required</h2>
+            <p style="margin-bottom: 1.5rem;">Please authenticate to access the admin dashboard</p>
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="password">Admin Password:</label>
+                    <input type="password" id="password" class="form-input" placeholder="Enter admin password" required>
+                </div>
+                <button type="submit" class="btn">Access Dashboard</button>
+            </form>
+            <div id="loginError" style="display: none;"></div>
+        </div>
+
+        <!-- Main Dashboard (hidden until authenticated) -->
+        <div id="dashboard" class="hidden">
+            
+            <!-- Quick Stats -->
+            <div class="stats-section">
+                <h2 style="text-align: center; margin-bottom: 1rem;">📊 Quick Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalChats">-</div>
+                        <div class="stat-label">Total Chats</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="uniqueUsers">-</div>
+                        <div class="stat-label">Unique Users</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="todayChats">-</div>
+                        <div class="stat-label">Today's Chats</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="avgResponse">-</div>
+                        <div class="stat-label">Avg Response Length</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Sections Grid -->
+            <div class="admin-grid">
+                
+                <!-- Chat Logs Management -->
+                <div class="admin-card" onclick="window.open('/admin/chat-logs', '_blank')">
+                    <div class="card-header logs">
+                        <span class="card-icon">📋</span>
+                        <div class="card-title">Chat Logs</div>
+                        <div class="card-subtitle">Monitor & analyze conversations</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-description">
+                            View and analyze all chat interactions with full conversation tracking, source detection, and user analytics.
+                        </div>
+                        <ul class="card-features">
+                            <li>Complete conversation history</li>
+                            <li>Source tracking (widgets, integrations)</li>
+                            <li>User prompts & Claude responses</li>
+                            <li>IP tracking & timestamps</li>
+                            <li>Full-width scrollable interface</li>
+                        </ul>
+                        <a href="/admin/chat-logs" target="_blank" class="card-action">Open Chat Logs →</a>
+                    </div>
+                </div>
+
+                <!-- Company Responses Management -->
+                <div class="admin-card" onclick="window.open('/admin/company-responses', '_blank')">
+                    <div class="card-header company">
+                        <span class="card-icon">🏢</span>
+                        <div class="card-title">Company Responses</div>
+                        <div class="card-subtitle">Manage branded Q&As</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-description">
+                            Configure company-specific responses that only appear for the minimal chat widget users.
+                        </div>
+                        <ul class="card-features">
+                            <li>ROI & performance responses</li>
+                            <li>Minimal widget exclusive</li>
+                            <li>Add/edit/delete Q&As</li>
+                            <li>Smart keyword matching</li>
+                            <li>Brand-specific messaging</li>
+                        </ul>
+                        <a href="/admin/company-responses" target="_blank" class="card-action">Manage Responses →</a>
+                    </div>
+                </div>
+
+                <!-- API Health & Monitoring -->
+                <div class="admin-card" onclick="window.open('/api/health', '_blank')">
+                    <div class="card-header health">
+                        <span class="card-icon">⚡</span>
+                        <div class="card-title">System Health</div>
+                        <div class="card-subtitle">Monitor API status</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-description">
+                            Check system status, database connectivity, and API health metrics.
+                        </div>
+                        <ul class="card-features">
+                            <li>Database connection status</li>
+                            <li>Claude API connectivity</li>
+                            <li>System performance metrics</li>
+                            <li>Error monitoring</li>
+                            <li>Real-time health checks</li>
+                        </ul>
+                        <a href="/api/health" target="_blank" class="card-action">Check Health →</a>
+                    </div>
+                </div>
+
+                <!-- Widget Demos -->
+                <div class="admin-card">
+                    <div class="card-header">
+                        <span class="card-icon">🛠️</span>
+                        <div class="card-title">Widget Demos</div>
+                        <div class="card-subtitle">Test integrations</div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-description">
+                            Test and demo your chat widgets and integrations.
+                        </div>
+                        <ul class="card-features">
+                            <li>Minimal chat widget demo</li>
+                            <li>TurboScores integration</li>
+                            <li>Qount demo page</li>
+                            <li>Lovable hero section</li>
+                            <li>Widget integration testing</li>
+                        </ul>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="/minimal-chat" target="_blank" style="flex: 1; min-width: 120px; text-align: center; padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-size: 0.9rem;">Minimal Widget</a>
+                            <a href="/qount-demo" target="_blank" style="flex: 1; min-width: 120px; text-align: center; padding: 0.5rem 1rem; background: #667eea; color: white; text-decoration: none; border-radius: 5px; font-size: 0.9rem;">Qount Demo</a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- API Endpoints Reference -->
+            <div class="stats-section">
+                <h2 style="text-align: center; margin-bottom: 1rem;">🔗 API Endpoints</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                        <strong>Chat API:</strong><br>
+                        <code>POST /api/chat</code><br>
+                        <small>Main chat endpoint for all integrations</small>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                        <strong>Chat Logs:</strong><br>
+                        <code>GET /api/chat-logs</code><br>
+                        <small>Retrieve chat logs with pagination</small>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                        <strong>Company Responses:</strong><br>
+                        <code>GET/POST/DELETE /api/company-responses</code><br>
+                        <small>Manage company-specific responses</small>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 1rem; border-radius: 5px;">
+                        <strong>Statistics:</strong><br>
+                        <code>GET /api/chat-stats</code><br>
+                        <small>Get usage statistics and metrics</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>🎯 Touchline Admin Console | <a href="https://github.com/schmalte04/touchline" target="_blank">GitHub Repository</a></p>
+            <p>Powered by Claude AI & Digital Ocean</p>
+        </div>
+    </div>
+
+    <script>
+        let isAuthenticated = false;
+
+        // Check if user is already authenticated
+        function checkAuthentication() {
+            const authToken = localStorage.getItem('touchline_admin_auth');
+            if (authToken === 'authenticated') {
+                isAuthenticated = true;
+                showDashboard();
+                loadStats();
+                return true;
+            }
+            return false;
+        }
+
+        // Show dashboard and hide login
+        function showDashboard() {
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        // Handle login
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('loginError');
+            
+            try {
+                const response = await fetch('/api/validate-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password: password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    localStorage.setItem('touchline_admin_auth', 'authenticated');
+                    isAuthenticated = true;
+                    showDashboard();
+                    loadStats();
+                } else {
+                    errorDiv.innerHTML = '<div class="message error">Invalid password. Please try again.</div>';
+                    errorDiv.style.display = 'block';
+                    document.getElementById('password').value = '';
+                }
+            } catch (error) {
+                errorDiv.innerHTML = '<div class="message error">Authentication error: ' + error.message + '</div>';
+                errorDiv.style.display = 'block';
+            }
+        });
+
+        // Load statistics
+        async function loadStats() {
+            if (!isAuthenticated) return;
+            
+            try {
+                const response = await fetch('/api/chat-stats');
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('totalChats').textContent = data.stats.totalChats.toLocaleString();
+                    document.getElementById('uniqueUsers').textContent = data.stats.uniqueUsers.toLocaleString();
+                    document.getElementById('avgResponse').textContent = data.stats.averageResponseLength + ' chars';
+                    
+                    // Get today's count
+                    const todayStats = data.stats.dailyChatsLast7Days.find(day => {
+                        const today = new Date().toISOString().split('T')[0];
+                        return day.date === today;
+                    });
+                    document.getElementById('todayChats').textContent = todayStats ? todayStats.count : '0';
+                } else {
+                    console.error('Failed to load stats:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!checkAuthentication()) {
+                // Show login form
+                document.getElementById('loginSection').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
