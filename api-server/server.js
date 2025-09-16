@@ -195,9 +195,18 @@ IMPORTANT NOTES:
 - To find Bundesliga matches, search for League = "D1"
 - To find Premier League matches, search for League = "E0" 
 - Country field contains the full country name
-- Use LIKE operator for flexible team name searches
 - Date format is YYYY-MM-DD for consistent filtering
-- Time format is HH:MM (CEST), so if someone from UK is asking you need to convert it`,
+- Time format is HH:MM (CEST), so if someone from UK is asking you need to convert it
+
+TEAM NAME MAPPINGS (Automatic):
+- Team names are automatically mapped to database format using TeamMapping.csv
+- "Manchester United" → "Man United" (database name)
+- "Manchester City" → "Man City" (database name)  
+- "Tottenham Hotspur" → "Tottenham"
+- "Borussia Dortmund" → "Dortmund"
+- "Atletico Madrid" → "Ath Madrid"
+- System handles 1000+ team name variations automatically
+- Use natural language team names - they will be mapped correctly`,
 
 
     // Table formatting instructions
@@ -300,6 +309,116 @@ function getWeekendDateRange() {
         end: formatDate(sunday),
         dates: [formatDate(saturday), formatDate(sunday)]
     };
+}
+
+// Load team mapping from CSV file
+let teamMappingData = null;
+
+async function loadTeamMappingData() {
+    if (teamMappingData) return teamMappingData;
+    
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        
+        const csvPath = path.join(__dirname, '../TeamMapping.csv');
+        const csvContent = await fs.readFile(csvPath, 'utf8');
+        const lines = csvContent.split('\n');
+        
+        if (lines.length < 2) {
+            console.warn('⚠️ TeamMapping.csv appears to be empty or invalid');
+            return {};
+        }
+        
+        // Parse header
+        const headers = lines[0].split(',').map(h => h.trim());
+        const databaseNameIndex = 0; // First column is Football.Data (database name)
+        
+        // Build mapping object
+        const mapping = {};
+        
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const values = line.split(',').map(v => v.trim());
+            if (values.length < headers.length) continue;
+            
+            const databaseName = values[databaseNameIndex];
+            if (!databaseName) continue;
+            
+            // Add all alternative names from all columns as keys pointing to database name
+            for (let j = 0; j < values.length; j++) {
+                const altName = values[j];
+                if (altName && altName !== databaseName && altName !== '') {
+                    // Clean the alternative name (remove quotes, extra spaces)
+                    const cleanAltName = altName.replace(/"/g, '').trim();
+                    if (cleanAltName) {
+                        mapping[cleanAltName] = databaseName;
+                        // Also add lowercase version for case-insensitive matching
+                        mapping[cleanAltName.toLowerCase()] = databaseName;
+                    }
+                }
+            }
+            
+            // Also map the database name to itself for consistency
+            mapping[databaseName] = databaseName;
+            mapping[databaseName.toLowerCase()] = databaseName;
+        }
+        
+        teamMappingData = mapping;
+        console.log(`✅ Loaded ${Object.keys(mapping).length / 2} team name mappings from CSV`);
+        return mapping;
+        
+    } catch (error) {
+        console.error('❌ Error loading TeamMapping.csv:', error.message);
+        return {};
+    }
+}
+
+// Map team name variations to database names using CSV data
+async function mapTeamNameToDatabase(teamName) {
+    if (!teamName) return teamName;
+    
+    // Load mapping data if not already loaded
+    const mapping = await loadTeamMappingData();
+    
+    // Try exact match first
+    if (mapping[teamName]) {
+        console.log(`🔄 Team mapping: "${teamName}" -> "${mapping[teamName]}"`);
+        return mapping[teamName];
+    }
+    
+    // Try case-insensitive match
+    const lowerCaseInput = teamName.toLowerCase();
+    if (mapping[lowerCaseInput]) {
+        console.log(`🔄 Team mapping (case-insensitive): "${teamName}" -> "${mapping[lowerCaseInput]}"`);
+        return mapping[lowerCaseInput];
+    }
+    
+    // Try partial matching for common cases
+    const commonMappings = {
+        'manchester united': 'Man United',
+        'manchester city': 'Man City',
+        'man united': 'Man United',
+        'man city': 'Man City',
+        'man utd': 'Man United',
+        'united': 'Man United',
+        'city': 'Man City',
+        'spurs': 'Tottenham',
+        'arsenal fc': 'Arsenal',
+        'chelsea fc': 'Chelsea',
+        'liverpool fc': 'Liverpool'
+    };
+    
+    if (commonMappings[lowerCaseInput]) {
+        console.log(`🔄 Team mapping (common): "${teamName}" -> "${commonMappings[lowerCaseInput]}"`);
+        return commonMappings[lowerCaseInput];
+    }
+    
+    // If no match found, return original name
+    console.log(`⚠️  No team mapping found for: "${teamName}"`);
+    return teamName;
 }
 
 // =============================================================================
@@ -465,26 +584,31 @@ async function searchMatchesFlexible(searchParams) {
         const params = [];
         const conditions = [];
 
-        // Team search with different operators
+        // Team search with mapping to database names
         if (team) {
+            // Map team name to database name using CSV data
+            const mappedTeamName = await mapTeamNameToDatabase(team);
+            console.log(`🏈 Team search: "${team}" mapped to "${mappedTeamName}"`);
+            
             let teamCondition;
             switch (operator) {
                 case 'equals':
                     teamCondition = `(Home = ? OR Away = ?)`;
-                    params.push(team, team);
+                    params.push(mappedTeamName, mappedTeamName);
                     break;
                 case 'starts_with':
                     teamCondition = `(Home LIKE ? OR Away LIKE ?)`;
-                    params.push(`${team}%`, `${team}%`);
+                    params.push(`${mappedTeamName}%`, `${mappedTeamName}%`);
                     break;
                 case 'ends_with':
                     teamCondition = `(Home LIKE ? OR Away LIKE ?)`;
-                    params.push(`%${team}`, `%${team}`);
+                    params.push(`%${mappedTeamName}`, `%${mappedTeamName}`);
                     break;
                 case 'contains':
                 default:
-                    teamCondition = `(Home LIKE ? OR Away LIKE ?)`;
-                    params.push(`%${team}%`, `%${team}%`);
+                    // For contains, also try both original and mapped names for better coverage
+                    teamCondition = `(Home LIKE ? OR Away LIKE ? OR Home LIKE ? OR Away LIKE ?)`;
+                    params.push(`%${mappedTeamName}%`, `%${mappedTeamName}%`, `%${team}%`, `%${team}%`);
             }
             conditions.push(teamCondition);
         }
@@ -1341,6 +1465,26 @@ app.get('/qount-demo', (req, res) => {
         res.sendFile(demoPath);
     } catch (error) {
         res.status(500).send('Demo not available');
+    }
+});
+
+// Minimal chat widget route
+app.get('/minimal-chat', (req, res) => {
+    try {
+        const chatPath = path.join(__dirname, '../minimal-chat-widget.html');
+        res.sendFile(chatPath);
+    } catch (error) {
+        res.status(500).send('Minimal chat widget not available');
+    }
+});
+
+// Hero section with integrated chat
+app.get('/hero', (req, res) => {
+    try {
+        const heroPath = path.join(__dirname, '../qount-hero-complete.html');
+        res.sendFile(heroPath);
+    } catch (error) {
+        res.status(500).send('Hero section not available');
     }
 });
 
