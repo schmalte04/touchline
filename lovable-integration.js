@@ -13,7 +13,7 @@ const FootballChatWidget = () => {
     // Test connection and add welcome message
     const testConnection = async () => {
       try {
-        const response = await fetch('https://touchline-api.schmalte.com/api/health');
+        const response = await fetch('https://shark-app-robkv.ondigitalocean.app/api/health');
         if (response.ok) {
           setIsConnected(true);
           setMessages([{
@@ -54,7 +54,7 @@ const FootballChatWidget = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://touchline-api.schmalte.com/api/chat', {
+      const response = await fetch('https://shark-app-robkv.ondigitalocean.app/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

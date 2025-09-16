@@ -17,7 +17,7 @@ const MinimalTouchlineChat = ({
   useEffect(() => {
     const testConnection = async () => {
       try {
-        const response = await fetch('https://touchline-api.schmalte.com/api/health');
+        const response = await fetch('https://shark-app-robkv.ondigitalocean.app/api/health');
         if (response.ok) {
           setIsConnected(true);
           // Add welcome message
@@ -62,7 +62,7 @@ const MinimalTouchlineChat = ({
     setIsLoading(true);
 
     try {
-      const response = await fetch('https://touchline-api.schmalte.com/api/chat', {
+      const response = await fetch('https://shark-app-robkv.ondigitalocean.app/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

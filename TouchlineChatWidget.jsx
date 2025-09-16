@@ -75,7 +75,7 @@ const TouchlineChatWidget = ({
       try {
         // Test connection first
         setConnectionStatus('connecting');
-        const healthResponse = await fetch('https://touchline-api.schmalte.com/api/health', {
+        const healthResponse = await fetch('https://shark-app-robkv.ondigitalocean.app/api/health', {
           method: 'GET',
           mode: 'cors'
         });
@@ -90,7 +90,7 @@ const TouchlineChatWidget = ({
         const branding = customBranding || brandingConfigs[theme] || brandingConfigs.qount;
         
         window.TouchlineConfig = {
-          apiUrl: 'https://touchline-api.schmalte.com',
+          apiUrl: 'https://shark-app-robkv.ondigitalocean.app',
           branding: branding,
           containerId: widgetRef.current?.id || 'touchline-widget-' + Date.now()
         };
@@ -98,7 +98,7 @@ const TouchlineChatWidget = ({
         // Load the widget script if not already loaded
         if (!window.TouchlineWidget) {
           const script = document.createElement('script');
-          script.src = 'https://touchline-api.schmalte.com/widget/touchline-widget.js';
+          script.src = 'https://shark-app-robkv.ondigitalocean.app/widget/touchline-widget.js';
           script.async = true;
           script.onload = () => {
             setIsLoaded(true);
