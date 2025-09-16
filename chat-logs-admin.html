@@ -332,7 +332,9 @@
                     <tr>
                         <th>Timestamp</th>
                         <th>IP Address</th>
+                        <th>Source</th>
                         <th>User Prompt</th>
+                        <th>Claude Response</th>
                         <th>Context</th>
                         <th>Response Length</th>
                     </tr>
@@ -467,15 +469,29 @@
                         if (log.context === 'welcome') contextClass = 'welcome';
                         else if (log.context === 'conversational' || log.context === 'conversational_fallback') contextClass = 'conversational';
                         
-                        // Truncate long prompts
+                        // Truncate long prompts and responses
                         const promptText = log.user_prompt.length > 80 
                             ? log.user_prompt.substring(0, 80) + '...' 
                             : log.user_prompt;
                         
+                        const responseText = log.claude_response 
+                            ? (log.claude_response.length > 100 
+                                ? log.claude_response.substring(0, 100) + '...' 
+                                : log.claude_response)
+                            : '(no response)';
+                        
+                        // Determine source badge color
+                        let sourceClass = 'betting';
+                        if (log.source === 'lovable') sourceClass = 'welcome';
+                        else if (log.source === 'turboscores') sourceClass = 'conversational';
+                        else if (log.source && log.source.startsWith('api_direct')) sourceClass = 'betting';
+                        
                         row.innerHTML = `
                             <td class="timestamp">${timestamp}</td>
                             <td><span class="ip-address">${log.ip_address}</span></td>
+                            <td><span class="context-badge ${sourceClass}">${log.source || 'NA'}</span></td>
                             <td class="prompt-text" title="${log.user_prompt.replace(/"/g, '&quot;')}">${promptText}</td>
+                            <td class="prompt-text" title="${(log.claude_response || '').replace(/"/g, '&quot;')}">${responseText}</td>
                             <td><span class="context-badge ${contextClass}">${log.context || 'unknown'}</span></td>
                             <td>${log.response_length} chars</td>
                         `;

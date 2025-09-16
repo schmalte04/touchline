@@ -521,12 +521,46 @@ async function createChatLogsTable() {
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 context VARCHAR(255) DEFAULT NULL,
                 response_length INT DEFAULT 0,
+                claude_response TEXT DEFAULT NULL,
+                source VARCHAR(100) DEFAULT 'NA',
                 INDEX idx_timestamp (timestamp),
-                INDEX idx_ip (ip_address)
+                INDEX idx_ip (ip_address),
+                INDEX idx_source (source)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `;
         
         await pool.execute(createTableQuery);
+        
+        // Add claude_response column if it doesn't exist (for existing tables)
+        try {
+            const alterTableQuery = `
+                ALTER TABLE chat_logs 
+                ADD COLUMN claude_response TEXT DEFAULT NULL
+            `;
+            await pool.execute(alterTableQuery);
+            console.log('✅ Added claude_response column to existing table');
+        } catch (alterError) {
+            // Column might already exist, which is fine
+            if (!alterError.message.includes('Duplicate column name')) {
+                console.log('ℹ️ Claude response column already exists or other alter error:', alterError.message);
+            }
+        }
+        
+        // Add source column if it doesn't exist (for existing tables)
+        try {
+            const alterSourceQuery = `
+                ALTER TABLE chat_logs 
+                ADD COLUMN source VARCHAR(100) DEFAULT 'NA'
+            `;
+            await pool.execute(alterSourceQuery);
+            console.log('✅ Added source column to existing table');
+        } catch (alterError) {
+            // Column might already exist, which is fine
+            if (!alterError.message.includes('Duplicate column name')) {
+                console.log('ℹ️ Source column already exists or other alter error:', alterError.message);
+            }
+        }
+        
         console.log('✅ Chat logs table created/verified successfully');
         return true;
     } catch (error) {
@@ -535,19 +569,71 @@ async function createChatLogsTable() {
     }
 }
 
+// Detect source of the chat request
+function detectChatSource(req) {
+    const referer = req.get('Referer') || req.get('Origin') || '';
+    const userAgent = req.get('User-Agent') || '';
+    
+    // Check for specific sources based on referer
+    if (referer.includes('lovable.dev') || referer.includes('lovable.ai')) {
+        return 'lovable';
+    }
+    
+    if (referer.includes('turboscores')) {
+        return 'turboscores';
+    }
+    
+    if (referer.includes('qount')) {
+        return 'qount';
+    }
+    
+    // Check if it's a direct API call (no referer but has specific user agents)
+    if (!referer && userAgent.includes('curl')) {
+        return 'api_direct_curl';
+    }
+    
+    if (!referer && userAgent.includes('Postman')) {
+        return 'api_direct_postman';
+    }
+    
+    if (!referer && (userAgent.includes('node') || userAgent.includes('axios') || userAgent.includes('fetch'))) {
+        return 'api_direct_script';
+    }
+    
+    // Check if it's from localhost (development)
+    if (referer.includes('localhost') || referer.includes('127.0.0.1')) {
+        return 'localhost_dev';
+    }
+    
+    // Check if it's from the main touchline domain
+    if (referer.includes('shark-app-robkv.ondigitalocean.app')) {
+        return 'touchline_app';
+    }
+    
+    // If we have a referer but don't recognize it
+    if (referer) {
+        return `external_${new URL(referer).hostname}`;
+    }
+    
+    // Default fallback
+    return 'NA';
+}
+
 // Log chat interaction to database
-async function logChatInteraction(ipAddress, userPrompt, context = null, responseLength = 0) {
+async function logChatInteraction(ipAddress, userPrompt, context = null, responseLength = 0, claudeResponse = null, source = 'NA') {
     try {
         const insertQuery = `
-            INSERT INTO chat_logs (ip_address, user_prompt, context, response_length)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO chat_logs (ip_address, user_prompt, context, response_length, claude_response, source)
+            VALUES (?, ?, ?, ?, ?, ?)
         `;
         
         await pool.execute(insertQuery, [
             ipAddress,
             userPrompt.substring(0, 2000), // Limit prompt length to prevent issues
             context,
-            responseLength
+            responseLength,
+            claudeResponse ? claudeResponse.substring(0, 10000) : null, // Limit response length
+            source
         ]);
         
         console.log(`📝 Chat interaction logged for IP: ${ipAddress.substring(0, 10)}...`);
@@ -1165,9 +1251,13 @@ app.post('/api/chat', async (req, res) => {
                         req.ip ||
                         'unknown';
         
+        // Detect source of the request
+        const chatSource = detectChatSource(req);
+        
         console.log(`💬 User query: ${userQuery}`);
         console.log(`📋 Context: ${context || 'none'}`);
         console.log(`🌐 Client IP: ${clientIP}`);
+        console.log(`📍 Source: ${chatSource}`);
 
         // Handle initialization/welcome message
         if (context === 'initialization' || userQuery.toLowerCase().includes('introduce yourself')) {
@@ -1176,7 +1266,7 @@ app.post('/api/chat', async (req, res) => {
 How are you doing today? Are you ready to build some winning accumulator bets? 🚀`;
             
             // Log the interaction
-            await logChatInteraction(clientIP, userQuery, context || 'welcome', welcomeMessage.length);
+            await logChatInteraction(clientIP, userQuery, context || 'welcome', welcomeMessage.length, welcomeMessage, chatSource);
             
             res.json({
                 success: true,
@@ -1217,7 +1307,7 @@ User Query: "${userQuery}"`;
                 const claudeResponse = response.content[0].text;
                 
                 // Log the conversational interaction
-                await logChatInteraction(clientIP, userQuery, context || 'conversational', claudeResponse.length);
+                await logChatInteraction(clientIP, userQuery, context || 'conversational', claudeResponse.length, claudeResponse, chatSource);
                 
                 res.json({
                     success: true,
@@ -1232,7 +1322,7 @@ User Query: "${userQuery}"`;
                 const fallbackResponse = "I'm doing well, thanks for asking! I'm here and ready to help you with football betting analysis and accumulator suggestions. What would you like to explore?";
                 
                 // Log the fallback interaction
-                await logChatInteraction(clientIP, userQuery, context || 'conversational_fallback', fallbackResponse.length);
+                await logChatInteraction(clientIP, userQuery, context || 'conversational_fallback', fallbackResponse.length, fallbackResponse, chatSource);
                 
                 res.json({
                     success: true,
@@ -1452,7 +1542,9 @@ ${PROMPT_TEMPLATES.BETTING_GUIDELINES}`;
             clientIP,
             userQuery,
             context || null,
-            claudeResponse.length
+            claudeResponse.length,
+            claudeResponse,
+            chatSource
         );
 
         res.json({
@@ -1516,7 +1608,7 @@ app.get('/api/chat-logs', async (req, res) => {
         const offset = parseInt(req.query.offset) || 0;
         
         const query = `
-            SELECT id, ip_address, user_prompt, timestamp, context, response_length
+            SELECT id, ip_address, user_prompt, timestamp, context, response_length, claude_response, source
             FROM chat_logs 
             ORDER BY timestamp DESC 
             LIMIT ? OFFSET ?
